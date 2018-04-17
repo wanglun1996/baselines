@@ -62,16 +62,22 @@ class Model(object):
             )[:-1]
         self.loss_names = ['policy_loss', 'value_loss', 'policy_entropy', 'approxkl', 'clipfrac']
 
+        def get_params():
+            return sess.run(params)
+
         def save(save_path):
-            ps = sess.run(params)
+            ps = get_params()
             joblib.dump(ps, save_path)
 
-        def load(load_path):
-            loaded_params = joblib.load(load_path)
+        def restore_params(loaded_params):
             restores = []
             for p, loaded_p in zip(params, loaded_params):
                 restores.append(p.assign(loaded_p))
             sess.run(restores)
+
+        def load(load_path):
+            loaded_params = joblib.load(load_path)
+            restore_params(loaded_params)
             # If you want to load weights, also save/load observation scaling inside VecNormalize
 
         self.train = train
@@ -80,7 +86,9 @@ class Model(object):
         self.step = act_model.step
         self.value = act_model.value
         self.initial_state = act_model.initial_state
+        self.get_params = get_params
         self.save = save
+        self.restore_params = restore_params
         self.load = load
         tf.global_variables_initializer().run(session=sess) #pylint: disable=E1101
 
@@ -182,6 +190,8 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
     tfirststart = time.time()
 
     nupdates = total_timesteps//nbatch
+    best_mean_reward = None
+    best_params = None
     for update in range(1, nupdates+1):
         assert nbatch % nminibatches == 0
         nbatch_train = nbatch // nminibatches
@@ -239,7 +249,17 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
             savepath = osp.join(checkdir, '%.5i'%update)
             print('Saving to', savepath)
             model.save(savepath)
+
+        mean_reward = safemean([epinfo['r'] for epinfo in epinfobuf])
+        if best_mean_reward is None or mean_reward > best_mean_reward:
+            logger.log("Updating model due to mean reward increase: {} -> {}".format(
+                best_mean_reward, mean_reward
+            ))
+            best_params = model.get_params()
+            best_mean_reward = mean_reward
     env.close()
+
+    return best_mean_reward, make_model, best_params
 
 def safemean(xs):
     return np.nan if len(xs) == 0 else np.mean(xs)
