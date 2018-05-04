@@ -179,10 +179,6 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
     make_model = lambda : Model(policy=policy, ob_space=ob_space, ac_space=ac_space, nbatch_act=nenvs, nbatch_train=nbatch_train,
                     nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef,
                     max_grad_norm=max_grad_norm)
-    if save_interval and logger.get_dir():
-        import cloudpickle
-        with open(osp.join(logger.get_dir(), 'make_model.pkl'), 'wb') as fh:
-            fh.write(cloudpickle.dumps(make_model))
     model = make_model()
     runner = Runner(env=env, model=model, nsteps=nsteps, gamma=gamma, lam=lam)
 
@@ -230,6 +226,7 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
         lossvals = np.mean(mblossvals, axis=0)
         tnow = time.time()
         fps = int(nbatch / (tnow - tstart))
+        mean_reward = safemean([epinfo['r'] for epinfo in epinfobuf])
         if update % log_interval == 0 or update == 1:
             ev = explained_variance(values, returns)
             logger.logkv("serial_timesteps", update*nsteps)
@@ -244,22 +241,9 @@ def learn(*, policy, env, nsteps, total_timesteps, ent_coef, lr,
                 logger.logkv(lossname, lossval)
             logger.dumpkvs()
         if save_interval and (update % save_interval == 0 or update == 1) and logger.get_dir():
-            checkdir = osp.join(logger.get_dir(), 'checkpoints')
-            os.makedirs(checkdir, exist_ok=True)
-            savepath = osp.join(checkdir, '%.5i'%update)
-            print('Saving to', savepath)
-            model.save(savepath)
+            yield update, mean_reward, make_model, model.get_params(), model
 
-        mean_reward = safemean([epinfo['r'] for epinfo in epinfobuf])
-        if best_mean_reward is None or mean_reward > best_mean_reward:
-            logger.log("Updating model due to mean reward increase: {} -> {}".format(
-                best_mean_reward, mean_reward
-            ))
-            best_params = model.get_params()
-            best_mean_reward = mean_reward
     env.close()
-
-    return best_mean_reward, make_model, best_params
 
 def safemean(xs):
     return np.nan if len(xs) == 0 else np.mean(xs)
