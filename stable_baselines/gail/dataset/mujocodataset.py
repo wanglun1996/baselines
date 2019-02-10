@@ -61,7 +61,8 @@ class Dataset(object):
 
 
 class MujocoDataset(object):
-    def __init__(self, expert_path, train_fraction=0.7, traj_limitation=-1, randomize=True):
+    def __init__(self, expert_path, train_fraction=0.7,
+                 traj_limitation=-1, randomize=True, verbose=1):
         """
         Dataset for mujoco
 
@@ -69,6 +70,7 @@ class MujocoDataset(object):
         :param train_fraction: (float) the train val split (0 to 1)
         :param traj_limitation: (int) the dims to load (if -1, load all)
         :param randomize: (bool) if the dataset should be shuffled
+        :param verbose: (int) Verbosity
         """
         traj_data = np.load(expert_path)
         if traj_limitation < 0:
@@ -85,6 +87,7 @@ class MujocoDataset(object):
         self.rets = traj_data['ep_rets'][:traj_limitation]
         self.avg_ret = sum(self.rets) / len(self.rets)
         self.std_ret = np.std(np.array(self.rets))
+        self.verbose = verbose
 
         # if len(self.actions) > 2:
         #     self.actions = np.squeeze(self.actions)
@@ -101,7 +104,8 @@ class MujocoDataset(object):
         self.val_set = Dataset(self.observations[int(self.num_transition * train_fraction):, :],
                                self.actions[int(self.num_transition * train_fraction):, :],
                                self.randomize)
-        self.log_info()
+        if self.verbose >= 1:
+            self.log_info()
 
     def log_info(self):
         """

@@ -216,7 +216,7 @@ class TRPO(ActorCriticRLModel):
                 with tf.variable_scope("Adam_mpi", reuse=False):
                     self.vfadam = MpiAdam(vf_var_list, sess=self.sess)
                     if self.using_gail:
-                        self.d_adam = MpiAdam(self.reward_giver.get_trainable_variables())
+                        self.d_adam = MpiAdam(self.reward_giver.get_trainable_variables(), sess=self.sess)
                         self.d_adam.sync()
                     self.vfadam.sync()
 

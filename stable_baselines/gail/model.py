@@ -22,7 +22,7 @@ class GAIL(ActorCriticRLModel):
     :param vf_iters: (int) the value function's number iterations for learning
     :param pretrained_weight: (str) the save location for the pretrained weights
     :param hidden_size: ([int]) the hidden dimension for the MLP
-    :param expert_dataset: (Dset) the dataset manager
+    :param expert_dataset: (Dataset) the dataset manager
     :param save_per_iter: (int) the number of iterations before saving
     :param checkpoint_dir: (str) the location for saving checkpoints
     :param g_step: (int) number of steps to train policy in each epoch
@@ -35,8 +35,8 @@ class GAIL(ActorCriticRLModel):
         WARNING: this logging can take a lot of space quickly
     """
 
-    def __init__(self, policy, env, pretrained_weight=False, hidden_size_adversary=100, adversary_entcoeff=1e-3,
-                 expert_dataset=None, save_per_iter=1, checkpoint_dir="/tmp/gail/ckpt/", g_step=1, d_step=1,
+    def __init__(self, policy, env, *, pretrained_weight=None, hidden_size_adversary=100, adversary_entcoeff=1e-3,
+                 expert_dataset=None, save_per_iter=1, checkpoint_dir="/tmp/gail/ckpt/", g_step=3, d_step=1,
                  task_name="task_name", d_stepsize=3e-4, verbose=0, _init_setup_model=True, **kwargs):
         super().__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=False,
                          _init_setup_model=_init_setup_model)
