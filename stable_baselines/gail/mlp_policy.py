@@ -15,7 +15,8 @@ from stable_baselines.ppo1.mlp_policy import BasePolicy
 class MlpPolicy(BasePolicy):
     recurrent = False
 
-    def __init__(self, name, *args, sess=None, reuse=False, placeholders=None, **kwargs):
+    def __init__(self, name, *args, sess=None, reuse=False, placeholders=None,
+                 normalize=True, **kwargs):
         """
         MLP policy for Gail
 
@@ -28,9 +29,12 @@ class MlpPolicy(BasePolicy):
         :param reuse: (bool) allow resue of the graph
         :param placeholders: (dict) To feed existing placeholders if needed
         :param gaussian_fixed_var: (bool) fix the gaussian variance
+        :param normalize: (bool) Normalize observations
         """
         super(MlpPolicy, self).__init__(placeholders=placeholders)
         self.sess = sess
+        self.normalize = normalize
+        self.obs_rms = None
         with tf.variable_scope(name):
             if reuse:
                 tf.get_variable_scope().reuse_variables()
@@ -41,10 +45,14 @@ class MlpPolicy(BasePolicy):
 
         obs, pdtype = self.get_obs_and_pdtype(ob_space, ac_space)
 
-        with tf.variable_scope("obfilter"):
-            self.ob_rms = RunningMeanStd(shape=ob_space.shape)
+        if self.normalize:
+            with tf.variable_scope("obfilter"):
+                self.ob_rms = RunningMeanStd(shape=ob_space.shape)
 
-        obz = tf.clip_by_value((obs - self.ob_rms.mean) / self.ob_rms.std, -5.0, 5.0)
+            obz = tf.clip_by_value((obs - self.ob_rms.mean) / self.ob_rms.std, -5.0, 5.0)
+        else:
+            obz = obs
+
         last_out = obz
         for i in range(num_hid_layers):
             last_out = tf.nn.tanh(dense(last_out, hid_size, "vffc%i" % (i+1),

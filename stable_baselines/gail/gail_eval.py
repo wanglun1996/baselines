@@ -15,7 +15,7 @@ import tensorflow as tf
 from stable_baselines.gail import run_mujoco, mlp_policy
 from stable_baselines.common import set_global_seeds, tf_util
 from stable_baselines.common.misc_util import boolean_flag
-from stable_baselines.gail.dataset.mujocodset import MujocoDset
+from stable_baselines.gail.dataset.mujocodataset import MujocoDataset
 
 
 plt.style.use('ggplot')
@@ -31,7 +31,7 @@ def load_dataset(expert_path):
     :param expert_path: (str) the path to trajectory data
     :return: (MujocoDset) the dataset manager object
     """
-    dataset = MujocoDset(expert_path=expert_path)
+    dataset = MujocoDataset(expert_path=expert_path)
     return dataset
 
 

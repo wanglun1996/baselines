@@ -17,9 +17,6 @@ from stable_baselines.a2c.utils import find_trainable_variables, total_episode_r
 from stable_baselines.trpo_mpi.utils import traj_segment_generator, add_vtarg_and_adv, flatten_lists
 
 
-# from stable_baselines.gail.statistics import Stats
-
-
 class TRPO(ActorCriticRLModel):
     """
     Trust Region Policy Optimization (https://arxiv.org/abs/1502.05477)
@@ -281,6 +278,7 @@ class TRPO(ActorCriticRLModel):
                 if self.using_gail:
                     true_rewbuffer = deque(maxlen=40)
                     #  Stats not used for now
+                    # TODO: replace with normal tb logging
                     #  g_loss_stats = Stats(loss_names)
                     #  d_loss_stats = Stats(reward_giver.loss_name)
                     #  ep_stats = Stats(["True_rewards", "Rewards", "Episode_length"])
@@ -421,7 +419,7 @@ class TRPO(ActorCriticRLModel):
                                                                       batch_size=batch_size):
                             ob_expert, ac_expert = self.expert_dataset.get_next_batch(len(ob_batch))
                             # update running mean/std for reward_giver
-                            if hasattr(self.reward_giver, "obs_rms"):
+                            if self.reward_giver.normalize:
                                 self.reward_giver.obs_rms.update(np.concatenate((ob_batch, ob_expert), 0))
                             *newlosses, grad = self.reward_giver.lossandgrad(ob_batch, ac_batch, ob_expert, ac_expert)
                             self.d_adam.update(self.allmean(grad), self.d_stepsize)

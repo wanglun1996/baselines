@@ -13,8 +13,8 @@ def logsigmoid(input_tensor):
     """
     Equivalent to tf.log(tf.sigmoid(a))
 
-    :param input_tensor: (TensorFlow Tensor)
-    :return: (TensorFlow Tensor)
+    :param input_tensor: (tf.Tensor)
+    :return: (tf.Tensor)
     """
     return -tf.nn.softplus(-input_tensor)
 
@@ -24,31 +24,43 @@ def logit_bernoulli_entropy(logits):
     Reference:
     https://github.com/openai/imitation/blob/99fbccf3e060b6e6c739bdf209758620fcdefd3c/policyopt/thutil.py#L48-L51
 
-    :param logits: (TensorFlow Tensor) the logits
-    :return: (TensorFlow Tensor) the bernoulli entropy
+    :param logits: (tf.Tensor) the logits
+    :return: (tf.Tensor) the bernoulli entropy
     """
     ent = (1. - tf.nn.sigmoid(logits)) * logits - logsigmoid(logits)
     return ent
 
 
 class TransitionClassifier(object):
-    def __init__(self, env, hidden_size, entcoeff=0.001, scope="adversary"):
+    def __init__(self, env, hidden_size, entcoeff=0.001, scope="adversary", normalize=True):
         """
-        reward regression from observations and transitions
+        Reward regression from observations and transitions
 
-        :param env: (Gym Environment)
+        :param env: (gym.Env)
         :param hidden_size: ([int]) the hidden dimension for the MLP
         :param entcoeff: (float) the entropy loss weight
         :param scope: (str) tensorflow variable scope
+        :param normalize: (bool) Wether to normalize the reward or not
         """
         self.scope = scope
         self.observation_shape = env.observation_space.shape
         self.actions_shape = env.action_space.shape
-        self.input_shape = tuple([o + a for o, a in zip(self.observation_shape, self.actions_shape)])
+        self.input_shape = tuple([obs + action for obs, action in zip(self.observation_shape, self.actions_shape)])
         self.num_actions = env.action_space.shape[0]
         self.hidden_size = hidden_size
-        self.build_ph()
-        # Build grpah
+        self.normalize = normalize
+        self.obs_rms = None
+
+        # Placeholders
+        self.generator_obs_ph = tf.placeholder(tf.float32, (None,) + self.observation_shape,
+                                               name="observations_ph")
+        self.generator_acs_ph = tf.placeholder(tf.float32, (None,) + self.actions_shape,
+                                               name="actions_ph")
+        self.expert_obs_ph = tf.placeholder(tf.float32, (None,) + self.observation_shape,
+                                            name="expert_observations_ph")
+        self.expert_acs_ph = tf.placeholder(tf.float32, (None,) + self.actions_shape,
+                                            name="expert_actions_ph")
+        # Build graph
         generator_logits = self.build_graph(self.generator_obs_ph, self.generator_acs_ph, reuse=False)
         expert_logits = self.build_graph(self.expert_obs_ph, self.expert_acs_ph, reuse=True)
         # Build accuracy
@@ -77,35 +89,25 @@ class TransitionClassifier(object):
             [self.generator_obs_ph, self.generator_acs_ph, self.expert_obs_ph, self.expert_acs_ph],
             self.losses + [tf_util.flatgrad(self.total_loss, var_list)])
 
-    def build_ph(self):
-        """
-        build placeholder
-        """
-        self.generator_obs_ph = tf.placeholder(tf.float32, (None,) + self.observation_shape,
-                                               name="observations_ph")
-        self.generator_acs_ph = tf.placeholder(tf.float32, (None,) + self.actions_shape,
-                                               name="actions_ph")
-        self.expert_obs_ph = tf.placeholder(tf.float32, (None,) + self.observation_shape,
-                                            name="expert_observations_ph")
-        self.expert_acs_ph = tf.placeholder(tf.float32, (None,) + self.actions_shape,
-                                            name="expert_actions_ph")
-
     def build_graph(self, obs_ph, acs_ph, reuse=False):
         """
         build the graph
 
-        :param obs_ph: (TensorFlow Tensor) the observation placeholder
-        :param acs_ph: (TensorFlow Tensor) the action placeholder
+        :param obs_ph: (tf.Tensor) the observation placeholder
+        :param acs_ph: (tf.Tensor) the action placeholder
         :param reuse: (bool)
-        :return: (TensorFlow Tensor) the graph output
+        :return: (tf.Tensor) the graph output
         """
         with tf.variable_scope(self.scope):
             if reuse:
                 tf.get_variable_scope().reuse_variables()
 
-            with tf.variable_scope("obfilter"):
-                self.obs_rms = RunningMeanStd(shape=self.observation_shape)
-            obs = (obs_ph - self.obs_rms.mean / self.obs_rms.std)
+            if self.normalize:
+                with tf.variable_scope("obfilter"):
+                    self.obs_rms = RunningMeanStd(shape=self.observation_shape)
+                obs = (obs_ph - self.obs_rms.mean) / self.obs_rms.std
+            else:
+                obs = obs_ph
             _input = tf.concat([obs, acs_ph], axis=1)  # concatenate the two input -> form a transition
             p_h1 = tf.contrib.layers.fully_connected(_input, self.hidden_size, activation_fn=tf.nn.tanh)
             p_h2 = tf.contrib.layers.fully_connected(p_h1, self.hidden_size, activation_fn=tf.nn.tanh)
@@ -114,18 +116,18 @@ class TransitionClassifier(object):
 
     def get_trainable_variables(self):
         """
-        get all the trainable variables from the graph
+        Get all the trainable variables from the graph
 
-        :return: ([TensorFlow Tensor]) the variables
+        :return: ([tf.Tensor]) the variables
         """
         return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, self.scope)
 
     def get_reward(self, obs, actions):
         """
-        get the reward using the observation and action
+        Predict the reward using the observation and action
 
-        :param obs: (TensorFlow Tensor or np.ndarray) the observation
-        :param actions: (TensorFlow Tensor or np.ndarray) the action
+        :param obs: (tf.Tensor or np.ndarray) the observation
+        :param actions: (tf.Tensor or np.ndarray) the action
         :return: (np.ndarray) the reward
         """
         sess = tf.get_default_session()

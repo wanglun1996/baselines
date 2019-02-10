@@ -16,7 +16,7 @@ from stable_baselines.common import set_global_seeds, tf_util
 from stable_baselines.common.misc_util import boolean_flag
 from stable_baselines.common.mpi_adam import MpiAdam
 from stable_baselines.gail.run_mujoco import runner
-from stable_baselines.gail.dataset.mujocodset import MujocoDset
+from stable_baselines.gail.dataset.mujocodataset import MujocoDataset
 
 
 def argsparser():
@@ -127,7 +127,7 @@ def main(args):
         task_name = get_task_name(args)
         args.checkpoint_dir = os.path.join(args.checkpoint_dir, task_name)
         args.log_dir = os.path.join(args.log_dir, task_name)
-        dataset = MujocoDset(expert_path=args.expert_path, traj_limitation=args.traj_limitation)
+        dataset = MujocoDataset(expert_path=args.expert_path, traj_limitation=args.traj_limitation)
         savedir_fname = learn(env, policy_fn, dataset, max_iters=args.BC_max_iter, ckpt_dir=args.checkpoint_dir,
                               task_name=task_name, verbose=True)
         runner(env,

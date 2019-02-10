@@ -1,9 +1,11 @@
 """
 Data structure of the input .npz:
-the data is save in python dictionary format with keys: 'acs', 'ep_rets', 'rews', 'obs'
+the data is save in python dictionary format with keys: 'actions', 'episode_returns', 'rewards', 'obs'
+Old format: 'acs', 'ep_rets', 'rews', 'obs'
 the values of each item is a list storing the expert trajectory sequentially
 a transition can be: (data['obs'][t], data['acs'][t], data['obs'][t+1]) and get reward data['rews'][t]
 """
+import argparse
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,7 +13,7 @@ import matplotlib.pyplot as plt
 from stable_baselines import logger
 
 
-class Dset(object):
+class Dataset(object):
     def __init__(self, inputs, labels, randomize):
         """
         Dataset object
@@ -25,6 +27,7 @@ class Dset(object):
         assert len(self.inputs) == len(self.labels)
         self.randomize = randomize
         self.num_pairs = len(inputs)
+        self.pointer = 0
         self.init_pointer()
 
     def init_pointer(self):
@@ -57,7 +60,7 @@ class Dset(object):
         return inputs, labels
 
 
-class MujocoDset(object):
+class MujocoDataset(object):
     def __init__(self, expert_path, train_fraction=0.7, traj_limitation=-1, randomize=True):
         """
         Dataset for mujoco
@@ -70,42 +73,44 @@ class MujocoDset(object):
         traj_data = np.load(expert_path)
         if traj_limitation < 0:
             traj_limitation = len(traj_data['obs'])
-        obs = traj_data['obs'][:traj_limitation]
-        acs = traj_data['acs'][:traj_limitation]
+        observations = traj_data['obs'][:traj_limitation]
+        actions = traj_data['acs'][:traj_limitation]
 
         # obs, acs: shape (N, L, ) + S where N = # episodes, L = episode length
         # and S is the environment observation/action space.
         # Flatten to (N * L, prod(S))
-        self.obs = np.reshape(obs, [-1, np.prod(obs.shape[2:])])
-        self.acs = np.reshape(acs, [-1, np.prod(acs.shape[2:])])
+        self.observations = np.reshape(observations, [-1, np.prod(observations.shape[2:])])
+        self.actions = np.reshape(actions, [-1, np.prod(actions.shape[2:])])
 
         self.rets = traj_data['ep_rets'][:traj_limitation]
-        self.avg_ret = sum(self.rets)/len(self.rets)
+        self.avg_ret = sum(self.rets) / len(self.rets)
         self.std_ret = np.std(np.array(self.rets))
-        if len(self.acs) > 2:
-            self.acs = np.squeeze(self.acs)
-        assert len(self.obs) == len(self.acs)
+
+        # if len(self.actions) > 2:
+        #     self.actions = np.squeeze(self.actions)
+
+        assert len(self.observations) == len(self.actions)
         self.num_traj = min(traj_limitation, len(traj_data['obs']))
-        self.num_transition = len(self.obs)
+        self.num_transition = len(self.observations)
         self.randomize = randomize
-        self.dset = Dset(self.obs, self.acs, self.randomize)
+        self.dataset = Dataset(self.observations, self.actions, self.randomize)
         # for behavior cloning
-        self.train_set = Dset(self.obs[:int(self.num_transition*train_fraction), :],
-                              self.acs[:int(self.num_transition*train_fraction), :],
-                              self.randomize)
-        self.val_set = Dset(self.obs[int(self.num_transition*train_fraction):, :],
-                            self.acs[int(self.num_transition*train_fraction):, :],
-                            self.randomize)
+        self.train_set = Dataset(self.observations[:int(self.num_transition * train_fraction), :],
+                                 self.actions[:int(self.num_transition * train_fraction), :],
+                                 self.randomize)
+        self.val_set = Dataset(self.observations[int(self.num_transition * train_fraction):, :],
+                               self.actions[int(self.num_transition * train_fraction):, :],
+                               self.randomize)
         self.log_info()
 
     def log_info(self):
         """
         log the information of the dataset
         """
-        logger.log("Total trajectorues: %d" % self.num_traj)
-        logger.log("Total transitions: %d" % self.num_transition)
-        logger.log("Average returns: %f" % self.avg_ret)
-        logger.log("Std for returns: %f" % self.std_ret)
+        logger.log("Total trajectories: {}".format(self.num_traj))
+        logger.log("Total transitions: {}".format(self.num_transition))
+        logger.log("Average returns: {}".format(self.avg_ret))
+        logger.log("Std for returns: {}".format(self.std_ret))
 
     def get_next_batch(self, batch_size, split=None):
         """
@@ -116,7 +121,7 @@ class MujocoDset(object):
         :return: (np.ndarray, np.ndarray) inputs and labels
         """
         if split is None:
-            return self.dset.get_next_batch(batch_size)
+            return self.dataset.get_next_batch(batch_size)
         elif split == 'train':
             return self.train_set.get_next_batch(batch_size)
         elif split == 'val':
@@ -126,11 +131,10 @@ class MujocoDset(object):
 
     def plot(self):
         """
-        show and save (to 'histogram_rets.png') a histogram plotting of the episode returns
+        Show histogram plotting of the episode returns
         """
         plt.hist(self.rets)
-        plt.savefig("histogram_rets.png")
-        plt.close()
+        plt.show()
 
 
 def test(expert_path, traj_limitation, plot):
@@ -141,16 +145,16 @@ def test(expert_path, traj_limitation, plot):
     :param traj_limitation: (int) the dims to load (if -1, load all)
     :param plot: (bool) enable plotting
     """
-    dset = MujocoDset(expert_path, traj_limitation=traj_limitation)
+    dset = MujocoDataset(expert_path, traj_limitation=traj_limitation)
     if plot:
         dset.plot()
 
 
 if __name__ == '__main__':
-    import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--expert_path", type=str, default="../data/deterministic.trpo.Hopper.0.00.npz")
-    parser.add_argument("--traj_limitation", type=int, default=None)
-    parser.add_argument("--plot", type=bool, default=False)
+    parser.add_argument('-i', '--expert_path', type=str, default='expert_pendulum.npz')
+    parser.add_argument('--traj_limitation', type=int, default=-1)
+    parser.add_argument('--plot', action='store_true', default=False)
     args = parser.parse_args()
     test(args.expert_path, args.traj_limitation, args.plot)
