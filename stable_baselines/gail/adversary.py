@@ -32,21 +32,23 @@ def logit_bernoulli_entropy(logits):
 
 
 class TransitionClassifier(object):
-    def __init__(self, env, hidden_size, entcoeff=0.001, scope="adversary", normalize=True):
+    def __init__(self, observation_space, action_space, hidden_size,
+                 entcoeff=0.001, scope="adversary", normalize=True):
         """
         Reward regression from observations and transitions
 
-        :param env: (gym.Env)
+        :param observation_space: (gym.spaces)
+        :param action_space: (gym.spaces)
         :param hidden_size: ([int]) the hidden dimension for the MLP
         :param entcoeff: (float) the entropy loss weight
         :param scope: (str) tensorflow variable scope
         :param normalize: (bool) Wether to normalize the reward or not
         """
         self.scope = scope
-        self.observation_shape = env.observation_space.shape
-        self.actions_shape = env.action_space.shape
+        self.observation_shape = observation_space.shape
+        self.actions_shape = action_space.shape
         self.input_shape = tuple([obs + action for obs, action in zip(self.observation_shape, self.actions_shape)])
-        self.num_actions = env.action_space.shape[0]
+        self.num_actions = action_space.shape[0]
         self.hidden_size = hidden_size
         self.normalize = normalize
         self.obs_rms = None

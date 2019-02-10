@@ -14,6 +14,8 @@ def test_gail():
                  expert_dataset=dataset, hidden_size_adversary=64, verbose=1)
 
     model.learn(1000)
+    model.save("GAIL-Pendulum")
+    model = model.load("GAIL-Pendulum")
 
     obs = env.reset()
 

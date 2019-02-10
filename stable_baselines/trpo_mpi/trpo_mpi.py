@@ -116,7 +116,8 @@ class TRPO(ActorCriticRLModel):
                 self.sess = tf_util.single_threaded_session(graph=self.graph)
 
                 if self.using_gail:
-                    self.reward_giver = TransitionClassifier(self.env, self.hidden_size_adversary,
+                    self.reward_giver = TransitionClassifier(self.observation_space, self.action_space,
+                                                             self.hidden_size_adversary,
                                                              entcoeff=self.adversary_entcoeff)
 
                 # Construct network for new policy
@@ -470,7 +471,8 @@ class TRPO(ActorCriticRLModel):
             "vf_stepsize": self.vf_stepsize,
             "vf_iters": self.vf_iters,
             "pretrained_weight": self.pretrained_weight,
-            "reward_giver": self.reward_giver,
+            "hidden_size_adversary": self.hidden_size_adversary,
+            "adversary_entcoeff": self.adversary_entcoeff,
             "expert_dataset": self.expert_dataset,
             "save_per_iter": self.save_per_iter,
             "checkpoint_dir": self.checkpoint_dir,

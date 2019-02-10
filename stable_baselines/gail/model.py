@@ -64,7 +64,7 @@ class GAIL(ActorCriticRLModel):
     def setup_model(self):
         assert issubclass(self.policy, ActorCriticPolicy), "Error: the input policy for the GAIL model must be an " \
                                                            "instance of common.policies.ActorCriticPolicy."
-        assert isinstance(self.action_space, gym.spaces.Box), "Error: GAIL requires a continuous action space."
+        assert isinstance(self.trpo.action_space, gym.spaces.Box), "Error: GAIL requires a continuous action space."
 
         self.trpo.setup_model()
 

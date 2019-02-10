@@ -102,7 +102,8 @@ def main(args):
 
         if args.task == 'train':
             dataset = MujocoDataset(expert_path=args.expert_path, traj_limitation=args.traj_limitation)
-            reward_giver = TransitionClassifier(env, args.adversary_hidden_size, entcoeff=args.adversary_entcoeff)
+            reward_giver = TransitionClassifier(env.observation_space, env.action_space,
+                                                args.adversary_hidden_size, entcoeff=args.adversary_entcoeff)
             train(env, args.seed, policy_fn, reward_giver, dataset, args.algo, args.g_step, args.d_step,
                   args.policy_entcoeff, args.num_timesteps, args.save_per_iter, args.checkpoint_dir, args.pretrained,
                   args.bc_max_iter, task_name)
