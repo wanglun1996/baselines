@@ -13,6 +13,7 @@ Pre-Release 2.5.0a0 (WIP)
 - fixed various bugs in GAIL
 - added scripts to generate dataset for gail
 - added tests for GAIL + data for Pendulum-v0
+- removed unused ``utils`` file in DQN folder
 
 
 Release 2.4.1 (2019-02-11)
