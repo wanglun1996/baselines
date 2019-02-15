@@ -1,3 +1,5 @@
+# TODO: save all the running averages!
+# otherwise loading a trained agent won't work
 import gym
 
 from stable_baselines.common import ActorCriticRLModel

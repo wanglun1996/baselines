@@ -10,7 +10,8 @@ def test_gail():
     env = gym.make('Pendulum-v0')
     dataset = MujocoDataset(expert_path=EXPERT_PATH, traj_limitation=-1, verbose=1)
 
-    model = GAIL('MlpPolicy', env,
+    # Note: train for 1M steps (4 workers) to have a working policy
+    model = GAIL('MlpPolicy', env, adversary_entcoeff=0.0, lam=0.92, max_kl=0.001,
                  expert_dataset=dataset, hidden_size_adversary=64, verbose=1)
 
     model.learn(1000)
