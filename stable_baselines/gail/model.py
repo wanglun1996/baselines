@@ -55,13 +55,14 @@ class GAIL(ActorCriticRLModel):
         self.trpo.d_stepsize = d_stepsize
         self.trpo.hidden_size_adversary = hidden_size_adversary
         self.trpo.adversary_entcoeff = adversary_entcoeff
+        self.env = self.trpo.env
 
         if _init_setup_model:
             self.setup_model()
 
     def set_env(self, env):
-        super().set_env(env)
         self.trpo.set_env(env)
+        self.env = self.trpo.env
 
     def setup_model(self):
         assert issubclass(self.policy, ActorCriticPolicy), "Error: the input policy for the GAIL model must be an " \
@@ -76,10 +77,10 @@ class GAIL(ActorCriticRLModel):
         return self
 
     def predict(self, observation, state=None, mask=None, deterministic=False):
-        return self.trpo.predict(observation, state, mask, deterministic=deterministic)
+        return self.trpo.predict(observation, state=state, mask=mask, deterministic=deterministic)
 
     def action_probability(self, observation, state=None, mask=None, actions=None):
-        return self.trpo.action_probability(observation, state, mask, actions)
+        return self.trpo.action_probability(observation, state=state, mask=mask, actions=actions)
 
     def save(self, save_path):
         self.trpo.save(save_path)

@@ -5,6 +5,16 @@ Changelog
 
 For download links, please look at `Github release page <https://github.com/hill-a/stable-baselines/releases>`_.
 
+Pre-Release 2.5.0a0 (WIP)
+--------------------------
+
+**GAIL**
+
+- fixed various bugs in GAIL
+- added scripts to generate dataset for gail
+- added tests for GAIL + data for Pendulum-v0
+
+
 Release 2.4.1 (2019-02-11)
 --------------------------
 
