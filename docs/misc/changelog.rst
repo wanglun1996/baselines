@@ -8,12 +8,16 @@ For download links, please look at `Github release page <https://github.com/hill
 Pre-Release 2.5.0a0 (WIP)
 --------------------------
 
-**GAIL**
+**Working GAIL and hotfix for A2C with continuous actions**
 
 - fixed various bugs in GAIL
 - added scripts to generate dataset for gail
 - added tests for GAIL + data for Pendulum-v0
 - removed unused ``utils`` file in DQN folder
+- fixed a bug in A2C where actions were cast to ``int32`` even in the continuous case
+- added addional logging to A2C when Monitor wrapper is used
+- changed logging for PPO2: do not display NaN when reward info is not present
+- change default value of A2C lr schedule
 
 
 Release 2.4.1 (2019-02-11)

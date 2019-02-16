@@ -336,8 +336,9 @@ class PPO2(ActorCriticRLModel):
                     logger.logkv("total_timesteps", self.num_timesteps)
                     logger.logkv("fps", fps)
                     logger.logkv("explained_variance", float(explained_var))
-                    logger.logkv('ep_rewmean', safe_mean([ep_info['r'] for ep_info in ep_info_buf]))
-                    logger.logkv('eplenmean', safe_mean([ep_info['l'] for ep_info in ep_info_buf]))
+                    if len(ep_info_buf) > 0 and len(ep_info_buf[0]) > 0:
+                        logger.logkv('ep_reward_mean', safe_mean([ep_info['r'] for ep_info in ep_info_buf]))
+                        logger.logkv('ep_len_mean', safe_mean([ep_info['l'] for ep_info in ep_info_buf]))
                     logger.logkv('time_elapsed', t_start - t_first_start)
                     for (loss_val, loss_name) in zip(loss_vals, self.loss_names):
                         logger.logkv(loss_name, loss_val)
