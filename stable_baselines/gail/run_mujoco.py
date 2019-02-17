@@ -1,23 +1,23 @@
 """
-Disclaimer: this code is highly based on trpo_mpi at @openai/stable_baselines and @openai/imitation
+Disclaimer: this code is highly based on trpo_mpi at @openai/baselines and @openai/imitation
 """
 
 import argparse
-import os
 import logging
+import os
 
+import gym
+import numpy as np
 from mpi4py import MPI
 from tqdm import tqdm
-import numpy as np
-import gym
 
-from stable_baselines.gail import mlp_policy, behavior_clone
-from stable_baselines.trpo_mpi.trpo_mpi import TRPO
+from stable_baselines import bench, logger
 from stable_baselines.common import set_global_seeds, tf_util
 from stable_baselines.common.misc_util import boolean_flag
-from stable_baselines import bench, logger
-from stable_baselines.gail.dataset.mujocodataset import MujocoDataset
+from stable_baselines.gail import behavior_clone
 from stable_baselines.gail.adversary import TransitionClassifier
+from stable_baselines.gail.dataset.mujocodataset import MujocoDataset
+from stable_baselines.trpo_mpi.trpo_mpi import TRPO
 
 
 def argsparser():
@@ -89,9 +89,11 @@ def main(args):
         set_global_seeds(args.seed)
         env = gym.make(args.env_id)
 
-        def policy_fn(name, ob_space, ac_space, reuse=False, placeholders=None, sess=None):
-            return mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space, reuse=reuse, sess=sess,
-                                        hid_size=args.policy_hidden_size, num_hid_layers=2, placeholders=placeholders)
+        # TODO: FIXME
+        policy_fn = None
+        # def policy_fn(name, ob_space, ac_space, reuse=False, placeholders=None, sess=None):
+        #     return mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space, reuse=reuse, sess=sess,
+        #                                 hid_size=args.policy_hidden_size, num_hid_layers=2, placeholders=placeholders)
         env = bench.Monitor(env, logger.get_dir() and
                             os.path.join(logger.get_dir(), "monitor.json"))
         env.seed(args.seed)
@@ -254,12 +256,12 @@ def traj_1_generator(policy, env, horizon, stochastic):
     actions = []
 
     while True:
-        acttion, _ = policy.act(stochastic, observation)
+        action, _ = policy.act(stochastic, observation)
         observations.append(observation)
         news.append(new)
-        actions.append(acttion)
+        actions.append(action)
 
-        observation, reward, new, _ = env.step(acttion)
+        observation, reward, new, _ = env.step(action)
         rewards.append(reward)
 
         cur_ep_ret += reward

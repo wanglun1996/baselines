@@ -1,6 +1,7 @@
 import gym
 
 from stable_baselines import GAIL
+from stable_baselines.gail.behavior_clone import main, argsparser
 from stable_baselines.gail.dataset.mujocodataset import MujocoDataset
 from stable_baselines.gail.dataset.record_expert import train_pendulum_expert
 
@@ -30,3 +31,12 @@ def test_gail():
 
 def test_generate_expert_data():
     train_pendulum_expert(n_timesteps=1000, n_episodes=10)
+
+
+def test_behavior_cloning():
+    parser = argsparser()
+    args = parser.parse_args(['--env', 'Pendulum-v0', '--expert-path', EXPERT_PATH,
+                              '--n-iters', '10', '--traj-limitation', '20'])
+    model = main(args)
+    model.save("test-bc-gail")
+    model = GAIL.load("test-bc-gail")
