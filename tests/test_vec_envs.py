@@ -103,18 +103,18 @@ def test_vecenv_dict_space(vec_env_class):
     def make_env():
         return CustomGymEnv(space)
 
-    def check_ob(ob):
-        assert isinstance(ob, dict)
-        for k, values in ob.items():
-            for v in values:
-                assert space.spaces[k].contains(v)
+    def check_obs(obs):
+        assert isinstance(obs, dict)
+        for key, values in obs.items():
+            for value in values:
+                assert space.spaces[key].contains(value)
 
     vec_env = vec_env_class([make_env for _ in range(N_ENVS)])
-    ob = vec_env.reset()
-    check_ob(ob)
+    obs = vec_env.reset()
+    check_obs(obs)
 
     dones = [False] * N_ENVS
     while not any(dones):
         actions = [vec_env.action_space.sample() for _ in range(N_ENVS)]
-        ob, rews, dones, infos = vec_env.step(actions)
-        check_ob(ob)
+        obs, _rews, dones, _infos = vec_env.step(actions)
+        check_obs(obs)
