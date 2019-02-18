@@ -164,6 +164,12 @@ class SubprocVecEnv(VecEnv):
 
 
 def _flatten_obs(obs):
+    """
+    Flatten observations, depending on the observation space.
+
+    :param obs: an observation, either a numpy array or a dict of numpy arrays.
+    :return a flattened numpy array or a dict of flattened numpy arrays.
+    """
     assert isinstance(obs, list) or isinstance(obs, tuple)
     assert len(obs) > 0
 
