@@ -8,11 +8,11 @@ N_ENVS = 3
 
 
 class CustomGymEnv(gym.Env):
-    def __init__(self):
+    def __init__(self, action_space):
         """
         Custom gym environment for testing purposes
         """
-        self.action_space = gym.spaces.Discrete(2)
+        self.action_space = action_space
         self.observation_space = self.action_space
         self.current_step = 0
         self.ep_length = 4
@@ -51,7 +51,9 @@ class CustomGymEnv(gym.Env):
 @pytest.mark.parametrize("vec_env_class", [DummyVecEnv, SubprocVecEnv])
 def test_vecenv_custom_calls(vec_env_class):
     """Test access to methods/attributes of vectorized environments"""
-    vec_env = vec_env_class([CustomGymEnv for _ in range(N_ENVS)])
+    def make_env():
+        return CustomGymEnv(gym.spaces.Discrete(2))
+    vec_env = vec_env_class([make_env for _ in range(N_ENVS)])
     env_method_results = vec_env.env_method('custom_method', 1, dim_1=2)
     setattr_results = []
     # Set current_step to an arbitrary value
@@ -88,3 +90,31 @@ def test_vecenv_custom_calls(vec_env_class):
     getattr_result = vec_env.get_attr('current_step')
     assert setattr_result == [None for _ in range(2)]
     assert getattr_result == [12] + [0 for _ in range(N_ENVS - 2)] + [12]
+
+
+@pytest.mark.parametrize("vec_env_class", [DummyVecEnv, SubprocVecEnv])
+def test_vecenv_dict_space(vec_env_class):
+    """Test dictionary observation spaces with vectorized environments."""
+    space = gym.spaces.Dict({
+        'discrete': gym.spaces.Discrete(2),
+        'continuous': gym.spaces.Box(low=np.zeros(2), high=np.ones(2)),
+    })
+
+    def make_env():
+        return CustomGymEnv(space)
+
+    def check_ob(ob):
+        assert isinstance(ob, dict)
+        for k, values in ob.items():
+            for v in values:
+                assert space.spaces[k].contains(v)
+
+    vec_env = vec_env_class([make_env for _ in range(N_ENVS)])
+    ob = vec_env.reset()
+    check_ob(ob)
+
+    dones = [False] * N_ENVS
+    while not any(dones):
+        actions = [vec_env.action_space.sample() for _ in range(N_ENVS)]
+        ob, rews, dones, infos = vec_env.step(actions)
+        check_ob(ob)
