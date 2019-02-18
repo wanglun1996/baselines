@@ -73,12 +73,12 @@ class SubprocVecEnv(VecEnv):
         results = [remote.recv() for remote in self.remotes]
         self.waiting = False
         obs, rews, dones, infos = zip(*results)
-        return np.stack(obs), np.stack(rews), np.stack(dones), infos
+        return _flatten_obs(obs), np.stack(rews), np.stack(dones), infos
 
     def reset(self):
         for remote in self.remotes:
             remote.send(('reset', None))
-        return np.stack([remote.recv() for remote in self.remotes])
+        return _flatten_obs([remote.recv() for remote in self.remotes])
 
     def close(self):
         if self.closed:
@@ -161,3 +161,16 @@ class SubprocVecEnv(VecEnv):
         for remote in [self.remotes[i] for i in indices]:
             remote.send(('set_attr', (attr_name, value)))
         return [remote.recv() for remote in [self.remotes[i] for i in indices]]
+
+
+def _flatten_obs(obs):
+    assert isinstance(obs, list) or isinstance(obs, tuple)
+    assert len(obs) > 0
+
+    if isinstance(obs[0], dict):
+        import collections
+        assert isinstance(obs[0], collections.OrderedDict)
+        keys = obs[0].keys()
+        return {k: np.stack([o[k] for o in obs]) for k in keys}
+    else:
+        return np.stack(obs)
