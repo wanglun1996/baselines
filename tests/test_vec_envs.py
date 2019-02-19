@@ -92,22 +92,10 @@ def test_vecenv_custom_calls(vec_env_class):
     assert getattr_result == [12] + [0 for _ in range(N_ENVS - 2)] + [12]
 
 
-@pytest.mark.parametrize("vec_env_class", [DummyVecEnv, SubprocVecEnv])
-def test_vecenv_dict_space(vec_env_class):
-    """Test dictionary observation spaces with vectorized environments."""
-    space = gym.spaces.Dict({
-        'discrete': gym.spaces.Discrete(2),
-        'continuous': gym.spaces.Box(low=np.zeros(2), high=np.ones(2)),
-    })
-
+def check_vecenv_spaces(vec_env_class, space, check_obs):
+    """Helper method to check observation spaces in vectorized environments."""
     def make_env():
         return CustomGymEnv(space)
-
-    def check_obs(obs):
-        assert isinstance(obs, dict)
-        for key, values in obs.items():
-            for value in values:
-                assert space.spaces[key].contains(value)
 
     vec_env = vec_env_class([make_env for _ in range(N_ENVS)])
     obs = vec_env.reset()
@@ -118,3 +106,37 @@ def test_vecenv_dict_space(vec_env_class):
         actions = [vec_env.action_space.sample() for _ in range(N_ENVS)]
         obs, _rews, dones, _infos = vec_env.step(actions)
         check_obs(obs)
+
+
+@pytest.mark.parametrize("vec_env_class", [DummyVecEnv, SubprocVecEnv])
+def test_vecenv_dict_spaces(vec_env_class):
+    """Test dictionary observation spaces with vectorized environments."""
+    space = gym.spaces.Dict({
+        'discrete': gym.spaces.Discrete(2),
+        'continuous': gym.spaces.Box(low=np.zeros(2), high=np.ones(2)),
+    })
+
+    def check_obs(obs):
+        assert isinstance(obs, dict)
+        for key, values in obs.items():
+            for value in values:
+                assert space.spaces[key].contains(value)
+
+    return check_vecenv_spaces(vec_env_class, space, check_obs)
+
+
+@pytest.mark.parametrize("vec_env_class", [DummyVecEnv, SubprocVecEnv])
+def test_vecenv_tuple_spaces(vec_env_class):
+    """Test tuple observation spaces with vectorized environments."""
+    space = gym.spaces.Tuple((
+        gym.spaces.Discrete(2),
+        gym.spaces.Box(low=np.zeros(2), high=np.ones(2)),
+    ))
+
+    def check_obs(obs):
+        assert isinstance(obs, tuple)
+        for values, inner_space in zip(obs, space.spaces):
+            for value in values:
+                assert inner_space.contains(value)
+
+    return check_vecenv_spaces(vec_env_class, space, check_obs)

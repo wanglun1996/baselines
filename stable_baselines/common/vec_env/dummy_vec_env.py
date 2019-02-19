@@ -64,7 +64,7 @@ class DummyVecEnv(VecEnv):
                 self.buf_obs[key][env_idx] = obs[key]
 
     def _obs_from_buf(self):
-        return dict_to_obs(copy_obs_dict(self.buf_obs))
+        return dict_to_obs(self.observation_space, copy_obs_dict(self.buf_obs))
 
     def env_method(self, method_name, *method_args, **method_kwargs):
         """

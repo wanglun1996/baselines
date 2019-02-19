@@ -18,35 +18,35 @@ def copy_obs_dict(obs):
     return {k: np.copy(v) for k, v in obs.items()}
 
 
-def obs_to_dict(obs):
+def dict_to_obs(space, obs_dict):
     """
-    Convert an observation into a dict.
+    Convert an internal representation raw_obs into the appropriate type
+    specified by space.
 
-    :param obs: (gym.spaces.Space) an observation space.
-    :return: (dict<ndarray>) if obs was a dictionary, returns obs.
-             Otherwise, returns a dictionary with a single key None and value obs.
-    """
-    if isinstance(obs, dict):
-        return obs
-    return {None: obs}
-
-
-def dict_to_obs(obs_dict):
-    """
-    Convert an observation dict into a raw array if singleton.
-
+    :param space: (gym.spaces.Space) an observation space.
     :param obs_dict: (dict<ndarray>) a dict of numpy arrays.
-    :return (ndarray or dict<ndarray>): if obs_dict has a single element
-            with key None, returns that value. Otherwise, returns the original dict.
+    :return (ndarray, tuple<ndarray> or dict<ndarray>): returns an observation
+            of the same type as space. If space is Dict, function is identity;
+            if space is Tuple, converts dict to Tuple; otherwise, space is
+            unstructured and returns the value raw_obs[None].
     """
-    if set(obs_dict.keys()) == {None}:
+    if isinstance(space, gym.spaces.Dict):
+        return obs_dict
+    elif isinstance(space, gym.spaces.Tuple):
+        assert len(obs_dict) == len(space.spaces)
+        return tuple((obs_dict[i] for i in range(len(space.spaces))))
+    else:
+        assert set(obs_dict.keys()) == {None}
         return obs_dict[None]
-    return obs_dict
 
 
 def obs_space_info(obs_space):
     """
     Get dict-structured information about a gym.Space.
+
+    Dict spaces are represented directly by their dict of subspaces.
+    Tuple spaces are converted into a dict with keys indexing into the tuple.
+    Unstructured spaces are represented by {None: obs_space}.
 
     :param obs_space: (gym.spaces.Space) an observation space
     :return (tuple) A tuple (keys, shapes, dtypes):
@@ -57,7 +57,10 @@ def obs_space_info(obs_space):
     if isinstance(obs_space, gym.spaces.Dict):
         assert isinstance(obs_space.spaces, OrderedDict)
         subspaces = obs_space.spaces
+    elif isinstance(obs_space, gym.spaces.Tuple):
+        subspaces = {i: space for i, space in enumerate(obs_space.spaces)}
     else:
+        assert not hasattr(obs_space, 'spaces')
         subspaces = {None: obs_space}
     keys = []
     shapes = {}

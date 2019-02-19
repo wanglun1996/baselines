@@ -168,10 +168,10 @@ def _flatten_obs(obs):
     """
     Flatten observations, depending on the observation space.
 
-    :param obs: (dict<ndarray> or ndarray) an observation.
-                Either a numpy array or a dict of numpy arrays.
-    :return (dict<ndarray> or ndarray) a flattened numpy array
-            or a dict of flattened numpy arrays.
+    :param obs: (dict<ndarray>, tuple<ndarray> or ndarray) an observation.
+                Either a numpy array or a dict or tuple of numpy arrays.
+    :return (dict<ndarray>, tuple<ndarray> or ndarray) a flattened numpy array
+            or a dict or tuple of flattened numpy arrays.
     """
     assert isinstance(obs, list) or isinstance(obs, tuple)
     assert len(obs) > 0
@@ -180,5 +180,8 @@ def _flatten_obs(obs):
         assert isinstance(obs[0], collections.OrderedDict)
         keys = obs[0].keys()
         return {k: np.stack([o[k] for o in obs]) for k in keys}
+    elif isinstance(obs[0], tuple):
+        obs_len = len(obs[0])
+        return tuple((np.stack([o[i] for o in obs]) for i in range(obs_len)))
     else:
         return np.stack(obs)
