@@ -18,7 +18,8 @@ Pre-Release 2.5.0a0 (WIP)
 - added addional logging to A2C when Monitor wrapper is used
 - changed logging for PPO2: do not display NaN when reward info is not present
 - change default value of A2C lr schedule
-- fixed behavior cloning script
+- removed behavior cloning script
+- added ``pretrain`` method to base class, in order to use behavior cloning on all models
 
 
 Release 2.4.1 (2019-02-11)

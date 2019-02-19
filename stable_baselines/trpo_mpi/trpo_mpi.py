@@ -59,15 +59,11 @@ class TRPO(ActorCriticRLModel):
         self.full_tensorboard_log = full_tensorboard_log
 
         # GAIL Params
-        self.pretrained_weight = None
         self.hidden_size_adversary = 100
         self.adversary_entcoeff = 1e-3
         self.expert_dataset = None
-        self.save_per_iter = 1
-        self.checkpoint_dir = "/tmp/gail/ckpt/"
         self.g_step = 1
         self.d_step = 1
-        self.task_name = "task_name"
         self.d_stepsize = 3e-4
 
         self.graph = None
@@ -97,6 +93,11 @@ class TRPO(ActorCriticRLModel):
 
         if _init_setup_model:
             self.setup_model()
+
+    def _get_pretrain_placeholders(self):
+        policy = self.policy_pi
+        action_ph = policy.pdtype.sample_placeholder([None])
+        return policy.obs_ph, action_ph, policy.deterministic_action
 
     def setup_model(self):
         # prevent import loops
@@ -284,11 +285,6 @@ class TRPO(ActorCriticRLModel):
                     #  d_loss_stats = Stats(reward_giver.loss_name)
                     #  ep_stats = Stats(["True_rewards", "Rewards", "Episode_length"])
 
-                    # if provide pretrained weight
-                    if self.pretrained_weight is not None:
-                        tf_util.load_state(self.pretrained_weight, var_list=tf_util.get_globals_vars("pi"),
-                                           sess=self.sess)
-
                 while True:
                     if callback is not None:
                         # Only stop training if return value is False, not when it is None. This is for backwards
@@ -470,15 +466,11 @@ class TRPO(ActorCriticRLModel):
             "cg_damping": self.cg_damping,
             "vf_stepsize": self.vf_stepsize,
             "vf_iters": self.vf_iters,
-            "pretrained_weight": self.pretrained_weight,
             "hidden_size_adversary": self.hidden_size_adversary,
             "adversary_entcoeff": self.adversary_entcoeff,
             "expert_dataset": self.expert_dataset,
-            "save_per_iter": self.save_per_iter,
-            "checkpoint_dir": self.checkpoint_dir,
             "g_step": self.g_step,
             "d_step": self.d_step,
-            "task_name": self.task_name,
             "d_stepsize": self.d_stepsize,
             "using_gail": self.using_gail,
             "verbose": self.verbose,

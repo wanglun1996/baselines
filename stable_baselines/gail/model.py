@@ -1,5 +1,3 @@
-# TODO: save all the running averages!
-# otherwise loading a trained agent won't work
 import gym
 
 from stable_baselines.common import ActorCriticRLModel
@@ -23,13 +21,9 @@ class GAIL(ActorCriticRLModel):
     :param cg_damping: (float) the compute gradient dampening factor
     :param vf_stepsize: (float) the value function stepsize
     :param vf_iters: (int) the value function's number iterations for learning
-    :param pretrained_weight: (str) the save location for the pretrained weights
     :param hidden_size: ([int]) the hidden dimension for the MLP
-    :param save_per_iter: (int) the number of iterations before saving
-    :param checkpoint_dir: (str) the location for saving checkpoints
     :param g_step: (int) number of steps to train policy in each epoch
     :param d_step: (int) number of steps to train discriminator in each epoch
-    :param task_name: (str) the name of the task (can be None)
     :param d_stepsize: (float) the reward giver stepsize
     :param verbose: (int) the verbosity level: 0 none, 1 training information, 2 tensorflow debug
     :param _init_setup_model: (bool) Whether or not to build the network at the creation of the instance
@@ -37,21 +31,18 @@ class GAIL(ActorCriticRLModel):
         WARNING: this logging can take a lot of space quickly
     """
 
-    def __init__(self, policy, env, expert_dataset=None, pretrained_weight=None, hidden_size_adversary=100, adversary_entcoeff=1e-3,
-                 save_per_iter=1, checkpoint_dir="/tmp/gail/ckpt/", g_step=3, d_step=1,
-                 task_name="task_name", d_stepsize=3e-4, verbose=0, _init_setup_model=True, **kwargs):
+    def __init__(self, policy, env, expert_dataset=None,
+                 hidden_size_adversary=100, adversary_entcoeff=1e-3,
+                 g_step=3, d_step=1, d_stepsize=3e-4, verbose=0,
+                 _init_setup_model=True, **kwargs):
         super().__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=False,
                          _init_setup_model=_init_setup_model)
 
         self.trpo = TRPO(policy, env, verbose=verbose, _init_setup_model=False, **kwargs)
         self.trpo.using_gail = True
-        self.trpo.pretrained_weight = pretrained_weight
         self.trpo.expert_dataset = expert_dataset
-        self.trpo.save_per_iter = save_per_iter
-        self.trpo.checkpoint_dir = checkpoint_dir
         self.trpo.g_step = g_step
         self.trpo.d_step = d_step
-        self.trpo.task_name = task_name
         self.trpo.d_stepsize = d_stepsize
         self.trpo.hidden_size_adversary = hidden_size_adversary
         self.trpo.adversary_entcoeff = adversary_entcoeff
@@ -59,6 +50,15 @@ class GAIL(ActorCriticRLModel):
 
         if _init_setup_model:
             self.setup_model()
+
+    def _get_pretrain_placeholders(self):
+        pass
+
+    def pretrain(self, dataset, num_iter=1000, batch_size=128,
+                 learning_rate=1e-4, adam_epsilon=1e-8):
+        self.trpo.pretrain(dataset, num_iter=num_iter, batch_size=batch_size,
+                           learning_rate=learning_rate, adam_epsilon=adam_epsilon)
+        return self
 
     def set_env(self, env):
         self.trpo.set_env(env)

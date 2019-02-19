@@ -1,7 +1,7 @@
 import gym
+import pytest
 
-from stable_baselines import GAIL
-from stable_baselines.gail.behavior_clone import main, argsparser
+from stable_baselines import A2C, GAIL, PPO1, PPO2, TRPO
 from stable_baselines.gail.dataset.mujocodataset import MujocoDataset
 from stable_baselines.gail.dataset.record_expert import train_pendulum_expert
 
@@ -33,10 +33,12 @@ def test_generate_expert_data():
     train_pendulum_expert(n_timesteps=1000, n_episodes=10)
 
 
-def test_behavior_cloning():
-    parser = argsparser()
-    args = parser.parse_args(['--env', 'Pendulum-v0', '--expert-path', EXPERT_PATH,
-                              '--n-iters', '10', '--traj-limitation', '20'])
-    model = main(args)
-    model.save("test-bc-gail")
-    model = GAIL.load("test-bc-gail")
+@pytest.mark.parametrize("model_class", [A2C, GAIL, PPO1, PPO2, TRPO])
+def test_behavior_cloning(model_class):
+    dataset = MujocoDataset(expert_path=EXPERT_PATH, traj_limitation=10)
+    if model_class == GAIL:
+        model = model_class("MlpPolicy", "Pendulum-v0", dataset)
+    else:
+        model = model_class("MlpPolicy", "Pendulum-v0")
+    model.pretrain(dataset, num_iter=1000)
+    model.save("test-pretrain")

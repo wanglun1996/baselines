@@ -122,6 +122,12 @@ class SAC(OffPolicyRLModel):
         if _init_setup_model:
             self.setup_model()
 
+    def _get_pretrain_placeholders(self):
+        policy = self.policy_tf
+        # Rescale
+        deterministic_action = self.deterministic_action * np.abs(self.action_space.low)
+        return policy.obs_ph, self.actions_ph, deterministic_action
+
     def setup_model(self):
         with SetVerbosity(self.verbose):
             self.graph = tf.Graph()
@@ -158,7 +164,7 @@ class SAC(OffPolicyRLModel):
                     # first return value corresponds to deterministic actions
                     # policy_out corresponds to stochastic actions, used for training
                     # logp_pi is the log probabilty of actions taken by the policy
-                    _, policy_out, logp_pi = self.policy_tf.make_actor(self.processed_obs_ph)
+                    self.deterministic_action, policy_out, logp_pi = self.policy_tf.make_actor(self.processed_obs_ph)
                     # Monitor the entropy of the policy,
                     # this is not used for training
                     self.entropy = tf.reduce_mean(self.policy_tf.entropy)

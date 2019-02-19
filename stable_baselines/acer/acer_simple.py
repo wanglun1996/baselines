@@ -149,6 +149,9 @@ class ACER(ActorCriticRLModel):
         if _init_setup_model:
             self.setup_model()
 
+    def _get_pretrain_placeholders(self):
+        raise NotImplementedError()
+
     def set_env(self, env):
         if env is not None:
             assert self.n_envs == env.num_envs, \

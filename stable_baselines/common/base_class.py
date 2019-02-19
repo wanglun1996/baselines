@@ -40,6 +40,9 @@ class BaseRLModel(ABC):
         self.n_envs = None
         self._vectorize_action = False
         self.num_timesteps = 0
+        self.graph = None
+        self.sess = None
+        self.params = None
 
         if env is not None:
             if isinstance(env, str):
@@ -149,6 +152,67 @@ class BaseRLModel(ABC):
                              "set_env(self, env) method.")
         if seed is not None:
             set_global_seeds(seed)
+
+    @abstractmethod
+    def _get_pretrain_placeholders(self):
+        """
+        Return the placeholders needed for the pretraining:
+        - obs_ph: observation placeholder
+        - actions_ph will be population with an action from the environement
+            (from the expert dataset)
+        - deterministic_actions_ph: e.g., in the case of a gaussian policy,
+            the mean.
+
+        :return: ((tf.placeholder)) (obs_ph, actions_ph, deterministic_actions_ph)
+        """
+        pass
+
+    def pretrain(self, dataset, num_iter=1000, batch_size=64,
+                 learning_rate=1e-4, adam_epsilon=1e-8):
+        """
+        Pretrain a model using behavior cloning:
+        supervised learning given an expert dataset.
+
+        :param dataset: (Dataset) Dataset manager
+        :param num_iter: (int) Number of iterations (gradient steps)
+        :param batch_size: (int) minibatch size
+        :param learning_rate: (float) Learning rate
+        :param adam_epsilon: (float) the epsilon value for the adam optimizer
+        :return: (BaseRLModel) the pretrained model
+        """
+        # Validate the model every 10% of the total number of iteration
+        val_interval = int(num_iter / 10)
+
+        with self.graph.as_default():
+            obs_ph, actions_ph, deterministic_actions_ph = self._get_pretrain_placeholders()
+
+            loss = tf.reduce_mean(tf.square(actions_ph - deterministic_actions_ph))
+            optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=adam_epsilon)
+            optim_op = optimizer.minimize(loss, var_list=self.params)
+
+            self.sess.run(tf.global_variables_initializer())
+
+        if self.verbose > 0:
+            print("Pretraining with Behavior Cloning...")
+
+        for iter_so_far in range(int(num_iter)):
+            expert_obs, expert_actions = dataset.get_next_batch(batch_size, 'train')
+            feed_dict = {
+                obs_ph: expert_obs,
+                actions_ph: expert_actions,
+            }
+            train_loss, _ = self.sess.run([loss, optim_op], feed_dict)
+
+            if self.verbose > 0 and (iter_so_far + 1) % val_interval == 0:
+                expert_obs, expert_actions = dataset.get_next_batch(-1, 'val')
+                val_loss, = self.sess.run([loss], {obs_ph: expert_obs,
+                                                   actions_ph: expert_actions})
+                if self.verbose > 0:
+                    print("==== Training progress {:.2f}% ====".format(100 * (iter_so_far + 1) / num_iter))
+                    print("Training loss: {:.6f}, Validation loss: {:.6f}".format(train_loss, val_loss))
+        if self.verbose > 0:
+            print("Pretraining done.")
+        return self
 
     @abstractmethod
     def learn(self, total_timesteps, callback=None, seed=None, log_interval=100, tb_log_name="run",

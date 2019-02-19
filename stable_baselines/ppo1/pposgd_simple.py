@@ -81,6 +81,11 @@ class PPO1(ActorCriticRLModel):
         if _init_setup_model:
             self.setup_model()
 
+    def _get_pretrain_placeholders(self):
+        policy = self.policy_pi
+        action_ph = policy.pdtype.sample_placeholder([None])
+        return policy.obs_ph, action_ph, policy.deterministic_action
+
     def setup_model(self):
         with SetVerbosity(self.verbose):
 

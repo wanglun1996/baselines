@@ -85,6 +85,10 @@ class A2C(ActorCriticRLModel):
         if _init_setup_model:
             self.setup_model()
 
+    def _get_pretrain_placeholders(self):
+        policy = self.train_model
+        return policy.obs_ph, self.actions_ph, policy.deterministic_action
+
     def setup_model(self):
         with SetVerbosity(self.verbose):
 

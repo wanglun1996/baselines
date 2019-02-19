@@ -14,7 +14,6 @@ from tqdm import tqdm
 from stable_baselines import bench, logger
 from stable_baselines.common import set_global_seeds, tf_util
 from stable_baselines.common.misc_util import boolean_flag
-from stable_baselines.gail import behavior_clone
 from stable_baselines.gail.adversary import TransitionClassifier
 from stable_baselines.gail.dataset.mujocodataset import MujocoDataset
 from stable_baselines.trpo_mpi.trpo_mpi import TRPO
@@ -148,7 +147,12 @@ def train(env, seed, policy_fn, reward_giver, dataset, algo, g_step, d_step, pol
     pretrained_weight = None
     if pretrained and (bc_max_iter > 0):
         # Pretrain with behavior cloning
-        pretrained_weight = behavior_clone.learn(env, policy_fn, dataset, max_iters=bc_max_iter)
+        # FIXME: use pretrain() method instead
+        # pretrained_weight = behavior_clone.learn(env, policy_fn, dataset, max_iters=bc_max_iter)
+        pass
+
+    # FIXME: remove unused variables
+    del checkpoint_dir, save_per_iter, task_name
 
     if algo == 'trpo':
         # Set up for MPI seed
@@ -162,14 +166,10 @@ def train(env, seed, policy_fn, reward_giver, dataset, algo, g_step, d_step, pol
                      entcoeff=policy_entcoeff, cg_damping=0.1, vf_stepsize=1e-3, vf_iters=5, _init_setup_model=False)
 
         # GAIL param
-        model.pretrained_weight = pretrained_weight
         model.reward_giver = reward_giver
         model.expert_dataset = dataset
-        model.save_per_iter = save_per_iter
-        model.checkpoint_dir = checkpoint_dir
         model.g_step = g_step
         model.d_step = d_step
-        model.task_name = task_name
         model.using_gail = True
         model.setup_model()
 

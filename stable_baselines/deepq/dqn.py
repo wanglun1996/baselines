@@ -97,6 +97,9 @@ class DQN(OffPolicyRLModel):
         if _init_setup_model:
             self.setup_model()
 
+    def _get_pretrain_placeholders(self):
+        raise NotImplementedError()
+
     def setup_model(self):
 
         with SetVerbosity(self.verbose):

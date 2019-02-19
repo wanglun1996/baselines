@@ -47,11 +47,7 @@ See help (``-h``) for more options.
 
 **In case you want to run Behavior Cloning (BC)**
 
-.. code:: bash
-
-   python -m stable_baselines.gail.behavior_clone
-
-See help (``-h``) for more options.
+Use the ``.pretrain`` method.
 
 
 OpenAI Maintainers:
