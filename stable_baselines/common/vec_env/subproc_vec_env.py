@@ -1,3 +1,4 @@
+import collections
 from multiprocessing import Process, Pipe
 
 import numpy as np
@@ -176,7 +177,6 @@ def _flatten_obs(obs):
     assert len(obs) > 0
 
     if isinstance(obs[0], dict):
-        import collections
         assert isinstance(obs[0], collections.OrderedDict)
         keys = obs[0].keys()
         return {k: np.stack([o[k] for o in obs]) for k in keys}
