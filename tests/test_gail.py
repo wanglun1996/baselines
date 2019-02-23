@@ -2,7 +2,7 @@ import gym
 import pytest
 
 from stable_baselines import A2C, GAIL, PPO1, PPO2, TRPO
-from stable_baselines.gail.dataset.mujocodataset import MujocoDataset
+from stable_baselines.gail.dataset.dataset import MujocoDataset
 from stable_baselines.gail.dataset.record_expert import train_pendulum_expert
 
 EXPERT_PATH = "stable_baselines/gail/dataset/expert_pendulum.npz"

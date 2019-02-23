@@ -15,7 +15,7 @@ from stable_baselines import bench, logger
 from stable_baselines.common import set_global_seeds, tf_util
 from stable_baselines.common.misc_util import boolean_flag
 from stable_baselines.gail.adversary import TransitionClassifier
-from stable_baselines.gail.dataset.mujocodataset import MujocoDataset
+from stable_baselines.gail.dataset.dataset import MujocoDataset
 from stable_baselines.trpo_mpi.trpo_mpi import TRPO
 
 

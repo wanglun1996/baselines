@@ -15,7 +15,7 @@ import tensorflow as tf
 from stable_baselines.common import set_global_seeds, tf_util
 from stable_baselines.common.misc_util import boolean_flag
 from stable_baselines.gail import run_mujoco
-from stable_baselines.gail.dataset.mujocodataset import MujocoDataset
+from stable_baselines.gail.dataset.dataset import MujocoDataset
 
 plt.style.use('ggplot')
 CONFIG = {
