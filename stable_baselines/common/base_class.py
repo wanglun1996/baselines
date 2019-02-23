@@ -173,6 +173,9 @@ class BaseRLModel(ABC):
         Pretrain a model using behavior cloning:
         supervised learning given an expert dataset.
 
+        NOTE: only Box and Discrete spaces are supported for now,
+        and images are not supported properly.
+
         :param dataset: (Dataset) Dataset manager
         :param num_iter: (int) Number of iterations (gradient steps)
         :param batch_size: (int) minibatch size
@@ -204,6 +207,8 @@ class BaseRLModel(ABC):
             train_loss, _ = self.sess.run([loss, optim_op], feed_dict)
 
             if self.verbose > 0 and (iter_so_far + 1) % val_interval == 0:
+                # Note: here we assume that all the dataset fit in memory
+                # batch_size = -1 -> return all the validation set
                 expert_obs, expert_actions = dataset.get_next_batch(-1, 'val')
                 val_loss, = self.sess.run([loss], {obs_ph: expert_obs,
                                                    actions_ph: expert_actions})

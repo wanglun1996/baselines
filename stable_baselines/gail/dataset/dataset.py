@@ -1,9 +1,7 @@
 """
 Data structure of the input .npz:
-the data is save in python dictionary format with keys: 'actions', 'episode_returns', 'rewards', 'obs'
-Old format: 'acs', 'ep_rets', 'rews', 'obs'
-the values of each item is a list storing the expert trajectory sequentially
-a transition can be: (data['obs'][t], data['acs'][t], data['obs'][t+1]) and get reward data['rews'][t]
+the data is save in python dictionary format with keys: 'actions', 'episode_returns', 'rewards', 'obs',
+'episode_starts'
 """
 import argparse
 
@@ -26,7 +24,7 @@ class Dataset(object):
         self.labels = labels
         assert len(self.inputs) == len(self.labels)
         self.randomize = randomize
-        self.num_pairs = len(inputs)
+        self.num_samples = len(inputs)
         self.pointer = 0
         self.init_pointer()
 
@@ -35,11 +33,11 @@ class Dataset(object):
         initialize the pointer and shuffle the dataset, if randomize the dataset
         """
         self.pointer = 0
+        # Shuffle the dataset
         if self.randomize:
-            idx = np.arange(self.num_pairs)
-            np.random.shuffle(idx)
-            self.inputs = self.inputs[idx, :]
-            self.labels = self.labels[idx, :]
+            indices = np.random.permutation(self.num_samples)
+            self.inputs = self.inputs[indices, :]
+            self.labels = self.labels[indices, :]
 
     def get_next_batch(self, batch_size):
         """
@@ -51,7 +49,7 @@ class Dataset(object):
         # if batch_size is negative -> return all
         if batch_size < 0:
             return self.inputs, self.labels
-        if self.pointer + batch_size >= self.num_pairs:
+        if self.pointer + batch_size >= self.num_samples:
             self.init_pointer()
         end = self.pointer + batch_size
         inputs = self.inputs[self.pointer:end, :]
@@ -60,11 +58,12 @@ class Dataset(object):
         return inputs, labels
 
 
-class MujocoDataset(object):
+class ExpertDataset(object):
     def __init__(self, expert_path, train_fraction=0.7,
                  traj_limitation=-1, randomize=True, verbose=1):
         """
-        Dataset for mujoco
+        Dataset for using behavior cloning or GAIL.
+        NOTE: Images input are not supported properly for now.
 
         :param expert_path: (str) the path to trajectory data
         :param train_fraction: (float) the train val split (0 to 1)
@@ -72,32 +71,55 @@ class MujocoDataset(object):
         :param randomize: (bool) if the dataset should be shuffled
         :param verbose: (int) Verbosity
         """
+        # TODO: properly support images as input
+        # (but too much memory usage for now, need a dataloader)
+        # TODO: support discrete actions (convert to one hot encoding)
         traj_data = np.load(expert_path)
-        if traj_limitation < 0:
-            traj_limitation = len(traj_data['obs'])
-        observations = traj_data['obs'][:traj_limitation]
-        actions = traj_data['acs'][:traj_limitation]
 
-        # obs, acs: shape (N, L, ) + S where N = # episodes, L = episode length
+        if verbose > 0:
+            for key, val in traj_data.items():
+                print(key, val.shape)
+
+        # Array of bool where episode_starts[i] = True for each new episode
+        episode_starts = traj_data['episode_starts']
+
+        traj_limit_idx = len(traj_data['obs'])
+
+        if traj_limitation > 0:
+            n_episodes = 0
+            # Retrieve the index corresponding
+            # to the traj_limitation trajectory
+            for idx, episode_start in enumerate(episode_starts):
+                n_episodes += int(episode_start)
+                if n_episodes == (traj_limitation + 1):
+                    traj_limit_idx = idx - 1
+
+        observations = traj_data['obs'][:traj_limit_idx]
+        actions = traj_data['actions'][:traj_limit_idx]
+
+        # obs, actions: shape (N * L, ) + S
+        # where N = # episodes, L = episode length
         # and S is the environment observation/action space.
+        # S = (1, ) for discrete space
         # Flatten to (N * L, prod(S))
-        self.observations = np.reshape(observations, [-1, np.prod(observations.shape[2:])])
-        self.actions = np.reshape(actions, [-1, np.prod(actions.shape[2:])])
+        if len(actions.shape) > 2:
+            observations = np.reshape(observations, [-1, np.prod(observations.shape[1:])])
+            actions = np.reshape(actions, [-1, np.prod(actions.shape[1:])])
 
-        self.rets = traj_data['ep_rets'][:traj_limitation]
-        self.avg_ret = sum(self.rets) / len(self.rets)
-        self.std_ret = np.std(np.array(self.rets))
+        self.observations = observations
+        self.actions = actions
+
+        self.returns = traj_data['episode_returns'][:traj_limit_idx]
+        self.avg_ret = sum(self.returns) / len(self.returns)
+        self.std_ret = np.std(np.array(self.returns))
         self.verbose = verbose
 
-        # if len(self.actions) > 2:
-        #     self.actions = np.squeeze(self.actions)
-
         assert len(self.observations) == len(self.actions)
-        self.num_traj = min(traj_limitation, len(traj_data['obs']))
+        self.num_traj = min(traj_limitation, np.sum(episode_starts))
         self.num_transition = len(self.observations)
         self.randomize = randomize
         self.dataset = Dataset(self.observations, self.actions, self.randomize)
-        # for behavior cloning
+        # For behavior cloning
         self.train_set = Dataset(self.observations[:int(self.num_transition * train_fraction), :],
                                  self.actions[:int(self.num_transition * train_fraction), :],
                                  self.randomize)
@@ -109,7 +131,7 @@ class MujocoDataset(object):
 
     def log_info(self):
         """
-        log the information of the dataset
+        Log the information of the dataset
         """
         logger.log("Total trajectories: {}".format(self.num_traj))
         logger.log("Total transitions: {}".format(self.num_transition))
@@ -118,7 +140,7 @@ class MujocoDataset(object):
 
     def get_next_batch(self, batch_size, split=None):
         """
-        get the batch from the dataset
+        Get the batch from the dataset
 
         :param batch_size: (int) the size of the batch from the dataset
         :param split: (str) the type of data split (can be None, 'train', 'val')
@@ -137,7 +159,7 @@ class MujocoDataset(object):
         """
         Show histogram plotting of the episode returns
         """
-        plt.hist(self.rets)
+        plt.hist(self.returns)
         plt.show()
 
 
@@ -149,7 +171,7 @@ def test(expert_path, traj_limitation, plot):
     :param traj_limitation: (int) the dims to load (if -1, load all)
     :param plot: (bool) enable plotting
     """
-    dset = MujocoDataset(expert_path, traj_limitation=traj_limitation)
+    dset = ExpertDataset(expert_path, traj_limitation=traj_limitation)
     if plot:
         dset.plot()
 
