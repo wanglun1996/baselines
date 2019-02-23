@@ -3,8 +3,6 @@ Data structure of the input .npz:
 the data is save in python dictionary format with keys: 'actions', 'episode_returns', 'rewards', 'obs',
 'episode_starts'
 """
-import argparse
-
 import numpy as np
 import matplotlib.pyplot as plt
 
