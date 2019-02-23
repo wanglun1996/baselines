@@ -28,12 +28,12 @@ def test_gail():
             obs = env.reset()
 
 
-def test_generate_expert_data_pendulum():
+def test_generate_pendulum():
     model = SAC('MlpPolicy', 'Pendulum-v0', verbose=1)
     generate_expert_traj(model, 'expert_pendulum', n_timesteps=1000, n_episodes=10)
 
 
-def test_generate_expert_data_cartpole():
+def test_generate_cartpole():
     model = DQN('MlpPolicy', 'CartPole-v1', verbose=1)
     generate_expert_traj(model, 'expert_cartpole', n_timesteps=1000, n_episodes=10)
 

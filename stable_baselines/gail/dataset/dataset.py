@@ -161,26 +161,3 @@ class ExpertDataset(object):
         """
         plt.hist(self.returns)
         plt.show()
-
-
-def test(expert_path, traj_limitation, plot):
-    """
-    test mujoco dataset object
-
-    :param expert_path: (str) the path to trajectory data
-    :param traj_limitation: (int) the dims to load (if -1, load all)
-    :param plot: (bool) enable plotting
-    """
-    dset = ExpertDataset(expert_path, traj_limitation=traj_limitation)
-    if plot:
-        dset.plot()
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--expert_path', type=str, default='expert_pendulum.npz')
-    parser.add_argument('--traj_limitation', type=int, default=-1)
-    parser.add_argument('--plot', action='store_true', default=False)
-    args = parser.parse_args()
-    test(args.expert_path, args.traj_limitation, args.plot)
