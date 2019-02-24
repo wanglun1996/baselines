@@ -40,7 +40,10 @@ def test_generate_cartpole():
 
 
 @pytest.mark.parametrize("model_class", [A2C, GAIL, DDPG, PPO1, PPO2, SAC, TRPO])
-def test_behavior_cloning_continuous(model_class):
+def test_behavior_cloning_box(model_class):
+    """
+    Behavior cloning with continuous actions.
+    """
     dataset = ExpertDataset(expert_path=EXPERT_PATH, traj_limitation=10)
     if model_class == GAIL:
         model = model_class("MlpPolicy", "Pendulum-v0", dataset)
