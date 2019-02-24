@@ -12,7 +12,7 @@ class DummyVecEnv(VecEnv):
 
     :param env_fns: ([Gym Environment]) the list of environments to vectorize
     """
-    
+
     def __init__(self, env_fns):
         self.envs = [fn() for fn in env_fns]
         env = self.envs[0]
@@ -58,7 +58,8 @@ class DummyVecEnv(VecEnv):
         return np.copy(self._obs_from_buf())
 
     def close(self):
-        return
+        for env in self.envs:
+            env.close()
 
     def get_images(self):
         return [env.render(mode='rgb_array') for env in self.envs]

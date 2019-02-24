@@ -20,6 +20,7 @@ Pre-Release 2.5.0a0 (WIP)
 - change default value of A2C lr schedule
 - removed behavior cloning script
 - added ``pretrain`` method to base class, in order to use behavior cloning on all models
+- fixed ``close()`` method for DummyVecEnv.
 
 
 Release 2.4.1 (2019-02-11)
