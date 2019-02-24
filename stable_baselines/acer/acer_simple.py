@@ -150,7 +150,11 @@ class ACER(ActorCriticRLModel):
             self.setup_model()
 
     def _get_pretrain_placeholders(self):
-        raise NotImplementedError()
+        policy = self.step_model
+        action_ph = policy.pdtype.sample_placeholder([None])
+        if isinstance(self.action_space, Discrete):
+            return policy.obs_ph, action_ph, policy.policy
+        raise NotImplementedError('Only discrete actions are supported for ACER for now')
 
     def set_env(self, env):
         if env is not None:

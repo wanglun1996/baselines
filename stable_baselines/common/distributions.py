@@ -293,7 +293,6 @@ class CategoricalProbabilityDistribution(ProbabilityDistribution):
         return tf.argmax(self.logits, axis=-1)
 
     def neglogp(self, x):
-        # return tf.nn. (logits=self.logits, labels=x)
         # Note: we can't use sparse_softmax_cross_entropy_with_logits because
         #       the implementation does not allow second-order derivatives...
         one_hot_actions = tf.one_hot(x, self.logits.get_shape().as_list()[-1])

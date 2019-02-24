@@ -2,6 +2,7 @@ import time
 from contextlib import contextmanager
 from collections import deque
 
+import gym
 from mpi4py import MPI
 import tensorflow as tf
 import numpy as np
@@ -97,6 +98,8 @@ class TRPO(ActorCriticRLModel):
     def _get_pretrain_placeholders(self):
         policy = self.policy_pi
         action_ph = policy.pdtype.sample_placeholder([None])
+        if isinstance(self.action_space, gym.spaces.Discrete):
+            return policy.obs_ph, action_ph, policy.policy
         return policy.obs_ph, action_ph, policy.deterministic_action
 
     def setup_model(self):

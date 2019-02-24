@@ -94,6 +94,8 @@ class PPO2(ActorCriticRLModel):
 
     def _get_pretrain_placeholders(self):
         policy = self.act_model
+        if isinstance(self.action_space, gym.spaces.Discrete):
+            return policy.obs_ph, self.action_ph, policy.policy
         return policy.obs_ph, self.action_ph, policy.deterministic_action
 
     def setup_model(self):

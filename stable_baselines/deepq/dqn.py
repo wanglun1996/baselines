@@ -98,7 +98,8 @@ class DQN(OffPolicyRLModel):
             self.setup_model()
 
     def _get_pretrain_placeholders(self):
-        raise NotImplementedError()
+        policy = self.step_model
+        return policy.obs_ph, tf.placeholder(tf.int32, [None]), policy.q_values
 
     def setup_model(self):
 

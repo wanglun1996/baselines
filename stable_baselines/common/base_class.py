@@ -183,15 +183,32 @@ class BaseRLModel(ABC):
         :param adam_epsilon: (float) the epsilon value for the adam optimizer
         :return: (BaseRLModel) the pretrained model
         """
+        continuous_actions = isinstance(self.action_space, gym.spaces.Box)
+        discrete_actions = isinstance(self.action_space, gym.spaces.Discrete)
+
+        assert discrete_actions or continuous_actions, 'Only Discrete and Box action spaces are supported'
+
         # Validate the model every 10% of the total number of iteration
         val_interval = int(num_iter / 10)
 
         with self.graph.as_default():
-            obs_ph, actions_ph, deterministic_actions_ph = self._get_pretrain_placeholders()
-
-            loss = tf.reduce_mean(tf.square(actions_ph - deterministic_actions_ph))
-            optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=adam_epsilon)
-            optim_op = optimizer.minimize(loss, var_list=self.params)
+            if continuous_actions:
+                obs_ph, actions_ph, deterministic_actions_ph = self._get_pretrain_placeholders()
+                loss = tf.reduce_mean(tf.square(actions_ph - deterministic_actions_ph))
+            else:
+                obs_ph, actions_ph, actions_logits_ph = self._get_pretrain_placeholders()
+                # actions_ph has a shape if (n_batch,), we reshape it to (n_batch, 1)
+                # so no additional changes is needed in the dataloader
+                actions_ph = tf.expand_dims(actions_ph, axis=1)
+                one_hot_actions = tf.one_hot(actions_ph, self.action_space.n)
+                loss = tf.nn.softmax_cross_entropy_with_logits_v2(
+                        logits=actions_logits_ph,
+                        labels=tf.stop_gradient(one_hot_actions)
+                        )
+                loss = tf.reduce_mean(loss)
+            with tf.variable_scope('pretrain'):
+                optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=adam_epsilon)
+                optim_op = optimizer.minimize(loss, var_list=self.params)
 
             self.sess.run(tf.global_variables_initializer())
 

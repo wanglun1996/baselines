@@ -7,7 +7,7 @@ from collections import deque
 
 import tensorflow as tf
 import numpy as np
-from gym.spaces import Box
+from gym.spaces import Box, Discrete
 
 from stable_baselines import logger
 from stable_baselines.common import explained_variance, ActorCriticRLModel, tf_util, SetVerbosity, TensorboardWriter
@@ -103,7 +103,9 @@ class ACKTR(ActorCriticRLModel):
             self.setup_model()
 
     def _get_pretrain_placeholders(self):
-        raise NotImplementedError()
+        policy = self.train_model
+        if isinstance(self.action_space, Discrete):
+            return policy.obs_ph, self.action_ph, policy.policy
 
     def setup_model(self):
         with SetVerbosity(self.verbose):

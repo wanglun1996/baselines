@@ -1,10 +1,11 @@
 import gym
 import pytest
 
-from stable_baselines import A2C, GAIL, DQN, PPO1, PPO2, TRPO, SAC
+from stable_baselines import A2C, ACER, ACKTR, GAIL, DDPG, DQN, PPO1, PPO2, TRPO, SAC
 from stable_baselines.gail import ExpertDataset, generate_expert_traj
 
 EXPERT_PATH = "stable_baselines/gail/dataset/expert_pendulum.npz"
+EXPERT_PATH_DISCRETE = "stable_baselines/gail/dataset/expert_cartpole.npz"
 
 
 def test_gail():
@@ -38,12 +39,25 @@ def test_generate_cartpole():
     generate_expert_traj(model, 'expert_cartpole', n_timesteps=1000, n_episodes=10)
 
 
-@pytest.mark.parametrize("model_class", [A2C, GAIL, PPO1, PPO2, SAC, TRPO])
-def test_behavior_cloning(model_class):
+@pytest.mark.parametrize("model_class", [A2C, GAIL, DDPG, PPO1, PPO2, SAC, TRPO])
+def test_behavior_cloning_continuous(model_class):
     dataset = ExpertDataset(expert_path=EXPERT_PATH, traj_limitation=10)
     if model_class == GAIL:
         model = model_class("MlpPolicy", "Pendulum-v0", dataset)
     else:
         model = model_class("MlpPolicy", "Pendulum-v0")
+    model.pretrain(dataset, num_iter=1000)
+    model.save("test-pretrain")
+
+
+@pytest.mark.parametrize("model_class", [A2C, ACER, ACKTR, DQN, PPO1, PPO2, TRPO])
+def test_behavior_cloning_discrete(model_class):
+    dataset = ExpertDataset(expert_path=EXPERT_PATH_DISCRETE, traj_limitation=10)
+    if model_class == GAIL:
+        # TODO: discrete actions support for GAIl
+        # model = model_class("MlpPolicy", "CartPole-v1", dataset)
+        return
+    else:
+        model = model_class("MlpPolicy", "CartPole-v1")
     model.pretrain(dataset, num_iter=1000)
     model.save("test-pretrain")
