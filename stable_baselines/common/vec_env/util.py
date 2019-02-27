@@ -12,10 +12,11 @@ def copy_obs_dict(obs):
     """
     Deep-copy a dict of numpy arrays.
 
-    :param obs: (dict<ndarray>): a dict of numpy arrays.
-    :return (dict<ndarray>) a dict of copied numpy arrays.
+    :param obs: (OrderedDict<ndarray>): a dict of numpy arrays.
+    :return (OrderedDict<ndarray>) a dict of copied numpy arrays.
     """
-    return {k: np.copy(v) for k, v in obs.items()}
+    assert isinstance(obs, OrderedDict)
+    return OrderedDict([(k, np.copy(v)) for k, v in obs.items()])
 
 
 def dict_to_obs(space, obs_dict):
@@ -24,7 +25,7 @@ def dict_to_obs(space, obs_dict):
     specified by space.
 
     :param space: (gym.spaces.Space) an observation space.
-    :param obs_dict: (dict<ndarray>) a dict of numpy arrays.
+    :param obs_dict: (OrderedDict<ndarray>) a dict of numpy arrays.
     :return (ndarray, tuple<ndarray> or dict<ndarray>): returns an observation
             of the same type as space. If space is Dict, function is identity;
             if space is Tuple, converts dict to Tuple; otherwise, space is

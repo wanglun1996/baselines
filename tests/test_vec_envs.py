@@ -1,3 +1,4 @@
+import collections
 import pytest
 import gym
 import numpy as np
@@ -8,12 +9,12 @@ N_ENVS = 3
 
 
 class CustomGymEnv(gym.Env):
-    def __init__(self, action_space):
+    def __init__(self, space):
         """
         Custom gym environment for testing purposes
         """
-        self.action_space = action_space
-        self.observation_space = self.action_space
+        self.action_space = space
+        self.observation_space = space
         self.current_step = 0
         self.ep_length = 4
 
@@ -30,7 +31,7 @@ class CustomGymEnv(gym.Env):
         return self.state, reward, done, {}
 
     def _choose_next_state(self):
-        self.state = self.action_space.sample()
+        self.state = self.observation_space.sample()
 
     def render(self, mode='human'):
         pass
@@ -108,21 +109,33 @@ def check_vecenv_spaces(vec_env_class, space, check_obs):
         check_obs(obs)
 
 
+class _UnorderedDictSpace(gym.spaces.Dict):
+    """Like DictSpace, but returns an unordered dict when sampling."""
+    def sample(self):
+        return dict(super().sample())
+
+
 @pytest.mark.parametrize("vec_env_class", [DummyVecEnv, SubprocVecEnv])
 def test_vecenv_dict_spaces(vec_env_class):
     """Test dictionary observation spaces with vectorized environments."""
-    space = gym.spaces.Dict({
+    subspaces = collections.OrderedDict({
         'discrete': gym.spaces.Discrete(2),
         'continuous': gym.spaces.Box(low=np.zeros(2), high=np.ones(2)),
     })
+    space = gym.spaces.Dict(subspaces)
 
     def check_obs(obs):
-        assert isinstance(obs, dict)
+        assert isinstance(obs, collections.OrderedDict)
+        assert obs.keys() == subspaces.keys()
         for key, values in obs.items():
             for value in values:
                 assert space.spaces[key].contains(value)
 
-    return check_vecenv_spaces(vec_env_class, space, check_obs)
+    check_vecenv_spaces(vec_env_class, space, check_obs)
+
+    unordered_space = _UnorderedDictSpace(subspaces)
+    # Check that vec_env_class can accept unordered dict observations (and convert to OrderedDict)
+    check_vecenv_spaces(vec_env_class, unordered_space, check_obs)
 
 
 @pytest.mark.parametrize("vec_env_class", [DummyVecEnv, SubprocVecEnv])
@@ -135,6 +148,7 @@ def test_vecenv_tuple_spaces(vec_env_class):
 
     def check_obs(obs):
         assert isinstance(obs, tuple)
+        assert len(obs) == len(space.spaces)
         for values, inner_space in zip(obs, space.spaces):
             for value in values:
                 assert inner_space.contains(value)

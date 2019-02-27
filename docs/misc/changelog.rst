@@ -8,7 +8,7 @@ For download links, please look at `Github release page <https://github.com/hill
 Pre-release 2.4.2a (WIP)
 ------------------------
 
-- added suport for Dict spaces in DummyVecEnv and SubprocVecEnv
+- added suport for Dict spaces in DummyVecEnv and SubprocVecEnv. (@AdamGleave) 
 
 Release 2.4.1 (2019-02-11)
 --------------------------
@@ -241,4 +241,4 @@ Contributors (since v2.0.0):
 In random order...
 
 Thanks to @bjmuld @iambenzo @iandanforth @r7vme @brendenpetersen @huvar @abhiskk @JohannesAck
-@EliasHasle @mrakgr @Bleyddyn @antoine-galataud @junhyeokahn
+@EliasHasle @mrakgr @Bleyddyn @antoine-galataud @junhyeokahn @AdamGleave

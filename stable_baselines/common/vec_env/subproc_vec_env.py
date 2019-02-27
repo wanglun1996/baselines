@@ -1,6 +1,7 @@
 import collections
 from multiprocessing import Process, Pipe
 
+import gym
 import numpy as np
 
 from stable_baselines.common.vec_env import VecEnv, CloudpickleWrapper
@@ -74,12 +75,13 @@ class SubprocVecEnv(VecEnv):
         results = [remote.recv() for remote in self.remotes]
         self.waiting = False
         obs, rews, dones, infos = zip(*results)
-        return _flatten_obs(obs), np.stack(rews), np.stack(dones), infos
+        return _flatten_obs(obs, self.observation_space), np.stack(rews), np.stack(dones), infos
 
     def reset(self):
         for remote in self.remotes:
             remote.send(('reset', None))
-        return _flatten_obs([remote.recv() for remote in self.remotes])
+        obs = [remote.recv() for remote in self.remotes]
+        return _flatten_obs(obs, self.observation_space)
 
     def close(self):
         if self.closed:
@@ -164,24 +166,25 @@ class SubprocVecEnv(VecEnv):
         return [remote.recv() for remote in [self.remotes[i] for i in indices]]
 
 
-def _flatten_obs(obs):
+def _flatten_obs(obs, space):
     """
     Flatten observations, depending on the observation space.
 
     :param obs: (dict<ndarray>, tuple<ndarray> or ndarray) an observation.
                 Either a numpy array or a dict or tuple of numpy arrays.
-    :return (dict<ndarray>, tuple<ndarray> or ndarray) a flattened numpy array
-            or a dict or tuple of flattened numpy arrays.
+    :return (OrderedDict<ndarray>, tuple<ndarray> or ndarray) a flattened numpy array
+            or an OrderedDict or tuple of flattened numpy arrays.
     """
     assert isinstance(obs, list) or isinstance(obs, tuple)
     assert len(obs) > 0
 
-    if isinstance(obs[0], dict):
-        assert isinstance(obs[0], collections.OrderedDict)
-        keys = obs[0].keys()
-        return {k: np.stack([o[k] for o in obs]) for k in keys}
-    elif isinstance(obs[0], tuple):
-        obs_len = len(obs[0])
+    if isinstance(space, gym.spaces.Dict):
+        assert isinstance(obs[0], dict)
+        return collections.OrderedDict([(k, np.stack([o[k] for o in obs]))
+                                        for k in space.spaces.keys()])
+    elif isinstance(space, gym.spaces.Tuple):
+        assert isinstance(obs[0], tuple)
+        obs_len = len(space.spaces)
         return tuple((np.stack([o[i] for o in obs]) for i in range(obs_len)))
     else:
         return np.stack(obs)
