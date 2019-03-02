@@ -1,4 +1,4 @@
-from multiprocessing import Process, Pipe
+import multiprocessing
 
 import numpy as np
 
@@ -51,9 +51,12 @@ class SubprocVecEnv(VecEnv):
         self.waiting = False
         self.closed = False
         n_envs = len(env_fns)
-        self.remotes, self.work_remotes = zip(*[Pipe() for _ in range(n_envs)])
-        self.processes = [Process(target=_worker, args=(work_remote, remote, CloudpickleWrapper(env_fn)))
+
+        ctx = multiprocessing.get_context('spawn')  # use thread safe method, see issue #217
+        self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)])
+        self.processes = [ctx.Process(target=_worker, args=(work_remote, remote, CloudpickleWrapper(env_fn)))
                           for (work_remote, remote, env_fn) in zip(self.work_remotes, self.remotes, env_fns)]
+
         for process in self.processes:
             process.daemon = True  # if the main process crashes, we should not cause things to hang
             process.start()
