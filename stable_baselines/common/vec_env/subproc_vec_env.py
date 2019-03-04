@@ -52,16 +52,21 @@ class SubprocVecEnv(VecEnv):
         self.closed = False
         n_envs = len(env_fns)
 
-        ctx = multiprocessing.get_context('spawn')  # use thread safe method, see issue #217
-        self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)])
-        self.processes = [ctx.Process(target=_worker, args=(work_remote, remote, CloudpickleWrapper(env_fn)))
-                          for (work_remote, remote, env_fn) in zip(self.work_remotes, self.remotes, env_fns)]
+        # Ue thread safe method, see issue #217.
+        # forkserver faster than spawn but not always available.
+        forkserver_available = 'forkserver' in multiprocessing.get_all_start_methods()
+        method = 'forkserver' if forkserver_available else 'spawn'
+        ctx = multiprocessing.get_context(method)
 
-        for process in self.processes:
-            process.daemon = True  # if the main process crashes, we should not cause things to hang
+        self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)])
+        self.processes = []
+        for work_remote, remote, env_fn in zip(self.work_remotes, self.remotes, env_fns):
+            args = (work_remote, remote, CloudpickleWrapper(env_fn))
+            # daemon=True: if the main process crashes, we should not cause things to hang
+            process = ctx.Process(target=_worker, args=args, daemon=True)
             process.start()
-        for remote in self.work_remotes:
-            remote.close()
+            self.processes.append(process)
+            work_remote.close()
 
         self.remotes[0].send(('get_spaces', None))
         observation_space, action_space = self.remotes[0].recv()
