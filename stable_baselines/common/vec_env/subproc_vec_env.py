@@ -1,5 +1,7 @@
+from collections import OrderedDict
 import multiprocessing
 
+import gym
 import numpy as np
 
 from stable_baselines.common.vec_env import VecEnv, CloudpickleWrapper
@@ -45,18 +47,26 @@ class SubprocVecEnv(VecEnv):
     Creates a multiprocess vectorized wrapper for multiple environments
 
     :param env_fns: ([Gym Environment]) Environments to run in subprocesses
+    :param start_method: (str) method used to start the subprocesses.
+           Must be one of the methods returned by multiprocessing.get_all_start_methods().
+           Defaults to 'forkserver' on available platforms, and 'spawn' otherwise.
+           Both 'forkserver' and 'spawn' are thread-safe, which is important when TensorFlow
+           sessions or other non thread-safe libraries are used in the parent (see issue #217).
+           However, compared to 'fork' they incur a small start-up cost and have restrictions on
+           global variables. For more information, see the multiprocessing documentation.
     """
 
-    def __init__(self, env_fns):
+    def __init__(self, env_fns, start_method=None):
         self.waiting = False
         self.closed = False
         n_envs = len(env_fns)
 
-        # Ue thread safe method, see issue #217.
-        # forkserver faster than spawn but not always available.
-        forkserver_available = 'forkserver' in multiprocessing.get_all_start_methods()
-        method = 'forkserver' if forkserver_available else 'spawn'
-        ctx = multiprocessing.get_context(method)
+        if start_method is None:
+            # Use thread safe method, see issue #217.
+            # forkserver faster than spawn but not always available.
+            forkserver_available = 'forkserver' in multiprocessing.get_all_start_methods()
+            start_method = 'forkserver' if forkserver_available else 'spawn'
+        ctx = multiprocessing.get_context(start_method)
 
         self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)])
         self.processes = []
