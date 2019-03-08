@@ -21,6 +21,7 @@ Pre-Release 2.5.0a0 (WIP)
 - removed behavior cloning script
 - added ``pretrain`` method to base class, in order to use behavior cloning on all models
 - fixed ``close()`` method for DummyVecEnv.
+- added suport for Dict spaces in DummyVecEnv and SubprocVecEnv. (@AdamGleave)
 
 
 Release 2.4.1 (2019-02-11)
@@ -254,4 +255,4 @@ Contributors (since v2.0.0):
 In random order...
 
 Thanks to @bjmuld @iambenzo @iandanforth @r7vme @brendenpetersen @huvar @abhiskk @JohannesAck
-@EliasHasle @mrakgr @Bleyddyn @antoine-galataud @junhyeokahn
+@EliasHasle @mrakgr @Bleyddyn @antoine-galataud @junhyeokahn @AdamGleave

@@ -2,6 +2,7 @@
 Data structure of the input .npz:
 the data is save in python dictionary format with keys: 'actions', 'episode_returns', 'rewards', 'obs',
 'episode_starts'
+TODO: support images using https://www.tensorflow.org/guide/datasets#decoding_image_data_and_resizing_it
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -71,7 +72,6 @@ class ExpertDataset(object):
         """
         # TODO: properly support images as input
         # (but too much memory usage for now, need a dataloader)
-        # TODO: support discrete actions (convert to one hot encoding)
         traj_data = np.load(expert_path)
 
         if verbose > 0:
