@@ -12,12 +12,12 @@ It is the same for `observations`, `rewards` and end of episode signals (`dones`
 In the case of non-array observation spaces such as `Dict` or `Tuple`, where different sub-spaces
 may have different shapes, the sub-observations are vectors (of dimension `n`).
 
-============= ============== ======= ============ ======== ========= ================
-Name          Refactored     ``Box`` ``Discrete`` ``Dict`` ``Tuple`` Multi Processing
-============= ============== ======= ============ ======== ========= ================
-DummyVecEnv   ✔️              ✔️      ✔️            ✔️       ✔️         ❌️
-SubprocVecEnv ✔️              ✔️      ✔️            ✔️       ✔️         ✔️
-============= ============== ======= ============ ======== ========= ================
+============= ======= ============ ======== ========= ================
+Name          ``Box`` ``Discrete`` ``Dict`` ``Tuple`` Multi Processing
+============= ======= ============ ======== ========= ================
+DummyVecEnv   ✔️       ✔️           ✔️        ✔️         ❌️
+SubprocVecEnv ✔️       ✔️           ✔️        ✔️         ✔️
+============= ======= ============ ======== ========= ================
 
 .. note::
 
