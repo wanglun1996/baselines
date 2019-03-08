@@ -1,7 +1,5 @@
-from collections import OrderedDict
 import multiprocessing
 
-import gym
 import numpy as np
 
 from stable_baselines.common.vec_env import VecEnv, CloudpickleWrapper
