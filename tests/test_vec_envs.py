@@ -1,5 +1,7 @@
 import collections
+import functools
 import itertools
+import multiprocessing
 import pytest
 import gym
 import numpy as np
@@ -170,3 +172,19 @@ def test_vecenv_tuple_spaces(vec_env_class):
             check_vecenv_obs(values, inner_space)
 
     return check_vecenv_spaces(vec_env_class, space, obs_assert)
+
+
+def test_subproc_vecenv_start_method():
+    start_methods = [None] + multiprocessing.get_all_start_methods()
+    space = gym.spaces.Discrete(2)
+
+    def obs_assert(obs):
+        return check_vecenv_obs(obs, space)
+
+    for start_method in start_methods:
+        vec_env_class = functools.partial(SubprocVecEnv, start_method=start_method)
+        check_vecenv_spaces(vec_env_class, space, obs_assert)
+
+    with pytest.raises(ValueError, match="cannot find context for 'illegal_method'"):
+        vec_env_class = functools.partial(SubprocVecEnv, start_method='illegal_method')
+        check_vecenv_spaces(vec_env_class, space, obs_assert)
