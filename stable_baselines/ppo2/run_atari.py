@@ -2,7 +2,6 @@ from stable_baselines import PPO2, logger
 from stable_baselines.common.cmd_util import make_atari_env, atari_arg_parser
 from stable_baselines.common.vec_env import VecFrameStack
 from stable_baselines.common.policies import CnnPolicy, CnnLstmPolicy, CnnLnLstmPolicy, MlpPolicy
-from stable_baselines.common.misc_util import kill_env_processes
 
 
 def train(env_id, num_timesteps, seed, policy,
@@ -28,8 +27,8 @@ def train(env_id, num_timesteps, seed, policy,
                  learning_rate=lambda f: f * 2.5e-4, cliprange=lambda f: f * 0.1, verbose=1)
     model.learn(total_timesteps=num_timesteps)
 
+    env.close()
     # Free memory
-    kill_env_processes(env)
     del model
 
 def main():

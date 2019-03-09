@@ -2,7 +2,6 @@ from stable_baselines import logger, ACKTR
 from stable_baselines.common.cmd_util import make_atari_env, atari_arg_parser
 from stable_baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from stable_baselines.common.policies import CnnPolicy
-from stable_baselines.common.misc_util import kill_env_processes
 
 
 def train(env_id, num_timesteps, seed, num_cpu):
@@ -18,8 +17,6 @@ def train(env_id, num_timesteps, seed, num_cpu):
     model = ACKTR(CnnPolicy, env, nprocs=num_cpu)
     model.learn(total_timesteps=int(num_timesteps * 1.1), seed=seed)
     env.close()
-    # Free memory
-    kill_env_processes(env)
 
 
 def main():

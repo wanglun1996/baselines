@@ -5,7 +5,6 @@ from stable_baselines import logger, ACER
 from stable_baselines.common.policies import CnnPolicy, CnnLstmPolicy
 from stable_baselines.common.cmd_util import make_atari_env, atari_arg_parser
 from stable_baselines.common.vec_env import VecFrameStack
-from stable_baselines.common.misc_util import kill_env_processes
 
 
 def train(env_id, num_timesteps, seed, policy, lr_schedule, num_cpu):
@@ -34,7 +33,6 @@ def train(env_id, num_timesteps, seed, policy, lr_schedule, num_cpu):
     env.close()
     # Free memory
     del model
-    kill_env_processes(env)
 
 
 def main():
