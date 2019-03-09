@@ -177,7 +177,7 @@ def test_vecenv_tuple_spaces(vec_env_class):
     return check_vecenv_spaces(vec_env_class, space, obs_assert)
 
 
-def test_subproc_vecenv_start_method():
+def test_subproc_start_method():
     start_methods = [None] + multiprocessing.get_all_start_methods()
     space = gym.spaces.Discrete(2)
 
