@@ -5,6 +5,7 @@ import gym
 import numpy as np
 
 from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines.common.misc_util import kill_env_processes
 
 N_ENVS = 3
 VEC_ENV_CLASSES = [DummyVecEnv, SubprocVecEnv]
@@ -93,6 +94,9 @@ def test_vecenv_custom_calls(vec_env_class):
     getattr_result = vec_env.get_attr('current_step')
     assert setattr_result == [None for _ in range(2)]
     assert getattr_result == [12] + [0 for _ in range(N_ENVS - 2)] + [12]
+
+    # Free memory
+    kill_env_processes(vec_env)
 
 
 SPACES = collections.OrderedDict([

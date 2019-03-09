@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-from stable_baselines import logger
+from stable_baselines import logger, A2C
 from stable_baselines.common.cmd_util import make_atari_env, atari_arg_parser
-from stable_baselines.common.vec_env.vec_frame_stack import VecFrameStack
-from stable_baselines.a2c import A2C
+from stable_baselines.common.vec_env import VecFrameStack
 from stable_baselines.common.policies import CnnPolicy, CnnLstmPolicy, CnnLnLstmPolicy
+from stable_baselines.common.misc_util import kill_env_processes
 
 
 def train(env_id, num_timesteps, seed, policy, lr_schedule, num_env):
@@ -34,6 +34,8 @@ def train(env_id, num_timesteps, seed, policy, lr_schedule, num_env):
     model = A2C(policy_fn, env, lr_schedule=lr_schedule)
     model.learn(total_timesteps=int(num_timesteps * 1.1), seed=seed)
     env.close()
+    # Free memory
+    kill_env_processes(env)
 
 
 def main():

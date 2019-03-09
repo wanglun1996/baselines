@@ -8,6 +8,8 @@ import gym
 import numpy as np
 import tensorflow as tf
 
+from stable_baselines.common.vec_env import VecFrameStack, SubprocVecEnv, VecNormalize
+
 
 def zipsame(*seqs):
     """
@@ -244,3 +246,20 @@ def pickle_load(path, compression=False):
     else:
         with open(path, "rb") as file_handler:
             return pickle.load(file_handler)
+
+
+def kill_env_processes(env):
+    """
+    Helper to fix memory issues when running tests,
+    by killing subprocesses.
+
+    :param env: (VecEnv) A wrapped vec env
+    """
+    # Unwrap
+    if isinstance(env, VecFrameStack):
+        env = env.venv
+    if isinstance(env, VecNormalize):
+        env = env.venv
+    if isinstance(env, SubprocVecEnv):
+        for process in env.processes:
+            process.terminate()
