@@ -106,6 +106,7 @@ class ACKTR(ActorCriticRLModel):
         policy = self.train_model
         if isinstance(self.action_space, Discrete):
             return policy.obs_ph, self.action_ph, policy.policy
+        raise NotImplementedError("WIP: ACKTR does not support Continuous actions yet.")
 
     def setup_model(self):
         with SetVerbosity(self.verbose):

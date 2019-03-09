@@ -167,18 +167,16 @@ class BaseRLModel(ABC):
         """
         pass
 
-    def pretrain(self, dataset, num_iter=1000, batch_size=64,
+    def pretrain(self, dataset, num_iter=1000,
                  learning_rate=1e-4, adam_epsilon=1e-8):
         """
         Pretrain a model using behavior cloning:
         supervised learning given an expert dataset.
 
-        NOTE: only Box and Discrete spaces are supported for now,
-        and images are not supported properly.
+        NOTE: only Box and Discrete spaces are supported for now.
 
-        :param dataset: (Dataset) Dataset manager
+        :param dataset: (ExpertDataset) Dataset manager
         :param num_iter: (int) Number of iterations (gradient steps)
-        :param batch_size: (int) minibatch size
         :param learning_rate: (float) Learning rate
         :param adam_epsilon: (float) the epsilon value for the adam optimizer
         :return: (BaseRLModel) the pretrained model
@@ -192,21 +190,21 @@ class BaseRLModel(ABC):
         val_interval = int(num_iter / 10)
 
         with self.graph.as_default():
-            if continuous_actions:
-                obs_ph, actions_ph, deterministic_actions_ph = self._get_pretrain_placeholders()
-                loss = tf.reduce_mean(tf.square(actions_ph - deterministic_actions_ph))
-            else:
-                obs_ph, actions_ph, actions_logits_ph = self._get_pretrain_placeholders()
-                # actions_ph has a shape if (n_batch,), we reshape it to (n_batch, 1)
-                # so no additional changes is needed in the dataloader
-                actions_ph = tf.expand_dims(actions_ph, axis=1)
-                one_hot_actions = tf.one_hot(actions_ph, self.action_space.n)
-                loss = tf.nn.softmax_cross_entropy_with_logits_v2(
-                        logits=actions_logits_ph,
-                        labels=tf.stop_gradient(one_hot_actions)
-                        )
-                loss = tf.reduce_mean(loss)
             with tf.variable_scope('pretrain'):
+                if continuous_actions:
+                    obs_ph, actions_ph, deterministic_actions_ph = self._get_pretrain_placeholders()
+                    loss = tf.reduce_mean(tf.square(actions_ph - deterministic_actions_ph))
+                else:
+                    obs_ph, actions_ph, actions_logits_ph = self._get_pretrain_placeholders()
+                    # actions_ph has a shape if (n_batch,), we reshape it to (n_batch, 1)
+                    # so no additional changes is needed in the dataloader
+                    actions_ph = tf.expand_dims(actions_ph, axis=1)
+                    one_hot_actions = tf.one_hot(actions_ph, self.action_space.n)
+                    loss = tf.nn.softmax_cross_entropy_with_logits_v2(
+                            logits=actions_logits_ph,
+                            labels=tf.stop_gradient(one_hot_actions)
+                            )
+                    loss = tf.reduce_mean(loss)
                 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=adam_epsilon)
                 optim_op = optimizer.minimize(loss, var_list=self.params)
 
@@ -216,7 +214,7 @@ class BaseRLModel(ABC):
             print("Pretraining with Behavior Cloning...")
 
         for iter_so_far in range(int(num_iter)):
-            expert_obs, expert_actions = dataset.get_next_batch(batch_size, 'train')
+            expert_obs, expert_actions = dataset.get_next_batch('train')
             feed_dict = {
                 obs_ph: expert_obs,
                 actions_ph: expert_actions,
@@ -224,14 +222,15 @@ class BaseRLModel(ABC):
             train_loss, _ = self.sess.run([loss, optim_op], feed_dict)
 
             if self.verbose > 0 and (iter_so_far + 1) % val_interval == 0:
-                # Note: here we assume that all the dataset fit in memory
-                # batch_size = -1 -> return all the validation set
-                expert_obs, expert_actions = dataset.get_next_batch(-1, 'val')
+                # TODO: do a full pass on the dataloader
+                expert_obs, expert_actions = dataset.get_next_batch('val')
                 val_loss, = self.sess.run([loss], {obs_ph: expert_obs,
                                                    actions_ph: expert_actions})
                 if self.verbose > 0:
                     print("==== Training progress {:.2f}% ====".format(100 * (iter_so_far + 1) / num_iter))
                     print("Training loss: {:.6f}, Validation loss: {:.6f}".format(train_loss, val_loss))
+            # Free memory
+            del expert_obs, expert_actions
         if self.verbose > 0:
             print("Pretraining done.")
         return self

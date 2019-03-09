@@ -19,6 +19,7 @@ def test_gail():
     model.learn(1000)
     model.save("GAIL-Pendulum")
     model = model.load("GAIL-Pendulum", env=env)
+    model.learn(1000)
 
     obs = env.reset()
 

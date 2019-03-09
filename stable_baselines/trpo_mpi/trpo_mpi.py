@@ -282,6 +282,11 @@ class TRPO(ActorCriticRLModel):
                 true_rewbuffer = None
                 if self.using_gail:
                     true_rewbuffer = deque(maxlen=40)
+
+                    # Initialize dataloader
+                    batchsize = self.timesteps_per_batch // self.d_step
+                    self.expert_dataset.init_dataloader(batchsize)
+
                     #  Stats not used for now
                     # TODO: replace with normal tb logging
                     #  g_loss_stats = Stats(loss_names)
@@ -317,7 +322,7 @@ class TRPO(ActorCriticRLModel):
                         add_vtarg_and_adv(seg, self.gamma, self.lam)
                         # ob, ac, atarg, ret, td1ret = map(np.concatenate, (obs, acs, atargs, rets, td1rets))
                         observation, action, atarg, tdlamret = seg["ob"], seg["ac"], seg["adv"], seg["tdlamret"]
-                        vpredbefore = seg["vpred"]  # predicted value function before udpate
+                        vpredbefore = seg["vpred"]  # predicted value function before update
                         atarg = (atarg - atarg.mean()) / atarg.std()  # standardized advantage function estimate
 
                         # true_rew is the reward without discount
@@ -411,13 +416,17 @@ class TRPO(ActorCriticRLModel):
                         # ------------------ Update D ------------------
                         logger.log("Optimizing Discriminator...")
                         logger.log(fmt_row(13, self.reward_giver.loss_name))
-                        ob_expert, ac_expert = self.expert_dataset.get_next_batch(len(observation))
-                        batch_size = len(observation) // self.d_step
+                        # NOTE: unused variables ?
+                        # NOTE: uses only the g step for observation
+                        # ob_expert, ac_expert = self.expert_dataset.get_next_batch(len(observation))
+                        assert len(observation) == self.timesteps_per_batch
+                        batch_size = self.timesteps_per_batch // self.d_step
+
                         d_losses = []  # list of tuples, each of which gives the loss for a minibatch
                         for ob_batch, ac_batch in dataset.iterbatches((observation, action),
                                                                       include_final_partial_batch=False,
                                                                       batch_size=batch_size):
-                            ob_expert, ac_expert = self.expert_dataset.get_next_batch(len(ob_batch))
+                            ob_expert, ac_expert = self.expert_dataset.get_next_batch()
                             # update running mean/std for reward_giver
                             if self.reward_giver.normalize:
                                 self.reward_giver.obs_rms.update(np.concatenate((ob_batch, ob_expert), 0))
@@ -459,6 +468,9 @@ class TRPO(ActorCriticRLModel):
         return self
 
     def save(self, save_path):
+        if self.using_gail:
+            # Exit processes to pickle the dataset
+            self.expert_dataset.prepare_pickling()
         data = {
             "gamma": self.gamma,
             "timesteps_per_batch": self.timesteps_per_batch,

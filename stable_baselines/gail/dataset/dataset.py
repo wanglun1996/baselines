@@ -2,76 +2,36 @@
 Data structure of the input .npz:
 the data is save in python dictionary format with keys: 'actions', 'episode_returns', 'rewards', 'obs',
 'episode_starts'
-TODO: support images using https://www.tensorflow.org/guide/datasets#decoding_image_data_and_resizing_it
+In case of images, 'obs' contains the relative path to the images.
+
+Original code for the dataloader from https://github.com/araffin/robotics-rl-srl (MIT licence)
+Authors: Antonin Raffin, René Traoré, Ashley Hill
 """
+import queue
+import time
+from multiprocessing import Queue, Process
+
+import cv2
 import numpy as np
+from joblib import Parallel, delayed
 import matplotlib.pyplot as plt
 
 from stable_baselines import logger
 
 
-class Dataset(object):
-    def __init__(self, inputs, labels, randomize):
-        """
-        Dataset object
-
-        :param inputs: (np.ndarray) the input values
-        :param labels: (np.ndarray) the target values
-        :param randomize: (bool) if the dataset should be shuffled
-        """
-        self.inputs = inputs
-        self.labels = labels
-        assert len(self.inputs) == len(self.labels)
-        self.randomize = randomize
-        self.num_samples = len(inputs)
-        self.pointer = 0
-        self.init_pointer()
-
-    def init_pointer(self):
-        """
-        initialize the pointer and shuffle the dataset, if randomize the dataset
-        """
-        self.pointer = 0
-        # Shuffle the dataset
-        if self.randomize:
-            indices = np.random.permutation(self.num_samples)
-            self.inputs = self.inputs[indices, :]
-            self.labels = self.labels[indices, :]
-
-    def get_next_batch(self, batch_size):
-        """
-        get the batch from the dataset
-
-        :param batch_size: (int) the size of the batch from the dataset
-        :return: (np.ndarray, np.ndarray) inputs and labels
-        """
-        # if batch_size is negative -> return all
-        if batch_size < 0:
-            return self.inputs, self.labels
-        if self.pointer + batch_size >= self.num_samples:
-            self.init_pointer()
-        end = self.pointer + batch_size
-        inputs = self.inputs[self.pointer:end, :]
-        labels = self.labels[self.pointer:end, :]
-        self.pointer = end
-        return inputs, labels
-
-
 class ExpertDataset(object):
-    def __init__(self, expert_path, train_fraction=0.7,
+    def __init__(self, expert_path, train_fraction=0.7, batch_size=64,
                  traj_limitation=-1, randomize=True, verbose=1):
         """
         Dataset for using behavior cloning or GAIL.
-        NOTE: Images input are not supported properly for now.
 
         :param expert_path: (str) the path to trajectory data
         :param train_fraction: (float) the train val split (0 to 1)
+        :param batch_size: (int) the minibatch size
         :param traj_limitation: (int) the dims to load (if -1, load all)
         :param randomize: (bool) if the dataset should be shuffled
         :param verbose: (int) Verbosity
         """
-        # TODO: properly support images as input
-        # (but too much memory usage for now, need a dataloader)
         traj_data = np.load(expert_path)
 
         if verbose > 0:
@@ -100,9 +60,29 @@ class ExpertDataset(object):
         # and S is the environment observation/action space.
         # S = (1, ) for discrete space
         # Flatten to (N * L, prod(S))
-        if len(actions.shape) > 2:
+        if len(observations.shape) > 2:
             observations = np.reshape(observations, [-1, np.prod(observations.shape[1:])])
+        if len(actions.shape) > 2:
             actions = np.reshape(actions, [-1, np.prod(actions.shape[1:])])
+
+        indices = np.random.permutation(len(observations)).astype(np.int64)
+        # split indices into minibatches. minibatchlist is a list of lists; each
+        # list is the id of the observation preserved through the training
+        minibatchlist = [np.array(sorted(indices[start_idx:start_idx + batch_size]))
+                         for start_idx in range(0, len(indices) - batch_size + 1, batch_size)]
+
+        minibatchlist = np.array(minibatchlist)
+        # Number of minibatches used for training
+        n_train_batches = np.round(train_fraction * len(minibatchlist)).astype(np.int64)
+        minibatches_indices = np.random.permutation(len(minibatchlist))
+        # Train/Validation split when using behavior cloning
+        train_indices = minibatches_indices[:n_train_batches]
+        val_indices = minibatches_indices[n_train_batches:]
+        minibatchlist_train = minibatchlist[train_indices]
+        minibatchlist_val = minibatchlist[val_indices]
+
+        assert len(train_indices) > 0
+        assert len(val_indices) > 0
 
         self.observations = observations
         self.actions = actions
@@ -116,16 +96,39 @@ class ExpertDataset(object):
         self.num_traj = min(traj_limitation, np.sum(episode_starts))
         self.num_transition = len(self.observations)
         self.randomize = randomize
-        self.dataset = Dataset(self.observations, self.actions, self.randomize)
-        # For behavior cloning
-        self.train_set = Dataset(self.observations[:int(self.num_transition * train_fraction), :],
-                                 self.actions[:int(self.num_transition * train_fraction), :],
-                                 self.randomize)
-        self.val_set = Dataset(self.observations[int(self.num_transition * train_fraction):, :],
-                               self.actions[int(self.num_transition * train_fraction):, :],
-                               self.randomize)
+        self.minibatchlist = minibatchlist
+
+        self.dataloader = None
+        self.train_loader = DataLoader(minibatchlist_train, self.observations, self.actions,
+                                       shuffle=self.randomize, start_process=False)
+        self.val_loader = DataLoader(minibatchlist_val, self.observations, self.actions,
+                                     shuffle=self.randomize, start_process=False)
+
         if self.verbose >= 1:
             self.log_info()
+
+    def init_dataloader(self, batch_size):
+        """
+        :param batch_size: (int)
+        """
+        indices = np.random.permutation(len(self.observations)).astype(np.int64)
+        # split indices into minibatches. minibatchlist is a list of lists; each
+        # list is the id of the observation preserved through the training
+        minibatchlist = [np.array(sorted(indices[start_idx:start_idx + batch_size]))
+                         for start_idx in range(0, len(indices) - batch_size + 1, batch_size)]
+
+        # TODO: add keyword allow_partial batch
+        # equivalent to batch_size > len(observations)
+        if len(minibatchlist) == 0:
+            minibatchlist = [np.arange(len(self.observations)).astype(np.int64)]
+        self.dataloader = DataLoader(minibatchlist, self.observations, self.actions,
+                                     shuffle=self.randomize, start_process=False)
+
+    def prepare_pickling(self):
+        """
+        Exit processes in order to pickle the dataset.
+        """
+        self.dataloader, self.train_loader, self.val_loader = None, None, None
 
     def log_info(self):
         """
@@ -136,22 +139,26 @@ class ExpertDataset(object):
         logger.log("Average returns: {}".format(self.avg_ret))
         logger.log("Std for returns: {}".format(self.std_ret))
 
-    def get_next_batch(self, batch_size, split=None):
+    def get_next_batch(self, split=None):
         """
         Get the batch from the dataset
 
-        :param batch_size: (int) the size of the batch from the dataset
         :param split: (str) the type of data split (can be None, 'train', 'val')
         :return: (np.ndarray, np.ndarray) inputs and labels
         """
-        if split is None:
-            return self.dataset.get_next_batch(batch_size)
-        elif split == 'train':
-            return self.train_set.get_next_batch(batch_size)
-        elif split == 'val':
-            return self.val_set.get_next_batch(batch_size)
-        else:
-            raise NotImplementedError
+        dataloader = {
+            None: self.dataloader,
+            'train': self.train_loader,
+            'val': self.val_loader
+        }[split]
+
+        if dataloader.process is None:
+            dataloader.start_process()
+        try:
+            return next(dataloader)
+        except StopIteration:
+            dataloader = iter(dataloader)
+            return next(dataloader)
 
     def plot(self):
         """
@@ -159,3 +166,114 @@ class ExpertDataset(object):
         """
         plt.hist(self.returns)
         plt.show()
+
+
+class DataLoader(object):
+    def __init__(self, minibatchlist, observations, actions, n_workers=1,
+                 infinite_loop=True, max_queue_len=4, shuffle=False,
+                 start_process=True):
+        """
+        A Custom dataloader to preprocessing images and feed them to the network.
+
+        :param minibatchlist: ([np.ndarray]) list of observations indices (grouped per minibatch)
+        :param observations: (np.ndarray) observations or images path
+        :param actions: (np.ndarray) actions
+        :param n_workers: (int) number of preprocessing worker (for loading the images)
+        :param infinite_loop: (bool) whether to have an iterator that can be resetted
+        :param max_queue_len: (int) Max number of minibatches that can be preprocessed at the same time
+        :param shuffle: (bool)
+        :param start_process: (bool)
+        """
+        super(DataLoader, self).__init__()
+        self.n_workers = n_workers
+        self.infinite_loop = infinite_loop
+        self.n_minibatches = len(minibatchlist)
+        self.minibatchlist = minibatchlist
+        self.observations = observations
+        self.actions = actions
+        self.shuffle = shuffle
+        self.queue = Queue(max_queue_len)
+        self.process = None
+        self.load_images = isinstance(observations[0], str)
+        if start_process:
+            self.start_process()
+
+    def start_process(self):
+        """Start preprocessing process"""
+        self.process = Process(target=self._run)
+        # Make it a deamon, so it will be deleted at the same time
+        # of the main process
+        self.process.daemon = True
+        self.process.start()
+
+    def _run(self):
+        start = True
+        with Parallel(n_jobs=self.n_workers, batch_size="auto", backend="threading") as parallel:
+            while start or self.infinite_loop:
+                start = False
+
+                if self.shuffle:
+                    indices = np.random.permutation(self.n_minibatches).astype(np.int64)
+                else:
+                    indices = np.arange(len(self.minibatchlist), dtype=np.int64)
+
+                for minibatch_idx in indices:
+
+                    obs = self.observations[self.minibatchlist[minibatch_idx]]
+                    if self.load_images:
+                        if self.n_workers <= 1:
+                            obs = [self._make_batch_element(image_path)
+                                   for image_path in obs]
+
+                        else:
+                            obs = parallel(delayed(self._make_batch_element)(image_path)
+                                           for image_path in obs)
+
+                        obs = np.concatenate(obs, axis=0)
+
+                    actions = self.actions[self.minibatchlist[minibatch_idx]]
+
+                    self.queue.put((obs, actions))
+
+                    # Free memory
+                    del obs
+
+                self.queue.put(None)
+
+    @classmethod
+    def _make_batch_element(cls, image_path):
+        """
+        :param image_path: (str) path to an image
+        :return: (np.ndarray)
+        """
+
+        im = cv2.imread(image_path)
+        if im is None:
+            raise ValueError("tried to load {}.jpg, but it was not found".format(image_path))
+
+        im = im.reshape((1,) + im.shape)
+        return im
+
+    def __len__(self):
+        return self.n_minibatches
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.process is None:
+            raise ValueError("You must call .start_process() before using the dataloader")
+        while True:
+            try:
+                val = self.queue.get_nowait()
+                break
+            except queue.Empty:
+                time.sleep(0.001)
+                continue
+        if val is None:
+            raise StopIteration
+        return val
+
+    def __del__(self):
+        if self.process is not None:
+            self.process.terminate()

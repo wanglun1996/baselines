@@ -11,7 +11,7 @@ class GAIL(ActorCriticRLModel):
 
     :param policy: (ActorCriticPolicy or str) The policy model to use (MlpPolicy, CnnPolicy, CnnLstmPolicy, ...)
     :param env: (Gym environment or str) The environment to learn from (if registered in Gym, can be str)
-    :param expert_dataset: (Dataset) the dataset manager
+    :param expert_dataset: (ExpertDataset) the dataset manager
     :param gamma: (float) the discount value
     :param timesteps_per_batch: (int) the number of timesteps to run per batch (horizon)
     :param max_kl: (float) the kullback leiber loss threashold
@@ -54,9 +54,9 @@ class GAIL(ActorCriticRLModel):
     def _get_pretrain_placeholders(self):
         pass
 
-    def pretrain(self, dataset, num_iter=1000, batch_size=128,
+    def pretrain(self, dataset, num_iter=1000,
                  learning_rate=1e-4, adam_epsilon=1e-8):
-        self.trpo.pretrain(dataset, num_iter=num_iter, batch_size=batch_size,
+        self.trpo.pretrain(dataset, num_iter=num_iter,
                            learning_rate=learning_rate, adam_epsilon=adam_epsilon)
         return self
 
