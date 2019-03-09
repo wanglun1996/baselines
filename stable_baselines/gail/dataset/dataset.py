@@ -247,12 +247,12 @@ class DataLoader(object):
         :return: (np.ndarray)
         """
 
-        im = cv2.imread(image_path)
-        if im is None:
-            raise ValueError("tried to load {}.jpg, but it was not found".format(image_path))
+        image = cv2.imread(image_path)
+        if image is None:
+            raise ValueError("Tried to load {}, but it was not found".format(image_path))
 
-        im = im.reshape((1,) + im.shape)
-        return im
+        image = image.reshape((1,) + image.shape)
+        return image
 
     def __len__(self):
         return self.n_minibatches
