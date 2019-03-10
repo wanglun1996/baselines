@@ -122,6 +122,9 @@ class ExpertDataset(object):
         self.dataloader = DataLoader(minibatchlist, self.observations, self.actions,
                                      shuffle=self.randomize, start_process=False)
 
+    def __del__(self):
+        del self.dataloader, self.train_loader, self.val_loader
+
     def prepare_pickling(self):
         """
         Exit processes in order to pickle the dataset.
