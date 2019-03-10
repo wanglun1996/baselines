@@ -25,10 +25,10 @@ ACKTR        ✔️                        ✔️         ❌ [#f5]_   ✔️   
 DDPG         ✔️                        ❌        ✔️           ❌           ❌
 DQN          ✔️                        ❌        ❌           ✔️           ❌
 GAIL [#f2]_  ✔️                        ✔️         ✔️           ✔️            ✔️ [#f4]_
-PPO1         ✔️                        ✔️         ✔️           ✔️            ✔️ [#f4]_
+PPO1         ✔️                        ❌        ✔️           ✔️            ✔️ [#f4]_
 PPO2         ✔️                        ✔️         ✔️           ✔️            ✔️
 SAC          ✔️                        ❌        ✔️           ❌           ❌
-TRPO         ✔️                        ✔️         ✔️           ✔️            ✔️ [#f4]_
+TRPO         ✔️                        ❌        ✔️           ✔️            ✔️ [#f4]_
 ============ ======================== ========= =========== ============ ================
 
 .. [#f1] Whether or not the algorithm has be refactored to fit the ``BaseRLModel`` class.

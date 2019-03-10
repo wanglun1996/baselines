@@ -8,16 +8,22 @@ from gym import spaces
 from stable_baselines.common.vec_env import VecEnv, VecFrameStack
 
 
-def generate_expert_traj(model, save_path, n_timesteps=60000,
+def generate_expert_traj(model, save_path, n_timesteps=0,
                          n_episodes=100, image_folder='recorded_images'):
     """
     Train expert controller (if needed) and record expert trajectories.
-    NOTE: only Box and Discrete spaces are supported for now.
 
-    :param model: (RL model)
-    :param save_path: (str)
-    :param n_timesteps: (int)
-    :param n_episodes: (int)
+    .. note::
+
+        only Box and Discrete spaces are supported for now.
+
+    :param model: (RL model) The expert model, if it needs to be trained,
+        then you need to pass ``n_timesteps > 0``.
+    :param save_path: (str) Path without the extension where the
+        expert dataset will be saved (ex: 'expert_cartpole' -> creates 'expert_cartpole.npz')
+    :param n_timesteps: (int) Number of training timesteps
+    :param n_episodes: (int) Number of trajectories (episodes) to record
+    :param image_folder: (str) When using images, folder that will be used to record images.
     """
     env = model.get_env()
 

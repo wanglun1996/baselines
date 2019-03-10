@@ -1,11 +1,8 @@
 """
-Data structure of the input .npz:
+Data structure of the expert .npz:
 the data is save in python dictionary format with keys: 'actions', 'episode_returns', 'rewards', 'obs',
 'episode_starts'
 In case of images, 'obs' contains the relative path to the images.
-
-Original code for the dataloader from https://github.com/araffin/robotics-rl-srl (MIT licence)
-Authors: Antonin Raffin, René Traoré, Ashley Hill
 """
 import queue
 import time
@@ -20,18 +17,19 @@ from stable_baselines import logger
 
 
 class ExpertDataset(object):
+    """
+    Dataset for using behavior cloning or GAIL.
+
+    :param expert_path: (str) the path to trajectory data (.npz file)
+    :param train_fraction: (float) the train validation split (0 to 1)
+        for pre-training using behavior cloning (BC)
+    :param batch_size: (int) the minibatch size for behavior cloning
+    :param traj_limitation: (int) the number of trajectory to use (if -1, load all)
+    :param randomize: (bool) if the dataset should be shuffled
+    :param verbose: (int) Verbosity
+    """
     def __init__(self, expert_path, train_fraction=0.7, batch_size=64,
                  traj_limitation=-1, randomize=True, verbose=1):
-        """
-        Dataset for using behavior cloning or GAIL.
-
-        :param expert_path: (str) the path to trajectory data
-        :param train_fraction: (float) the train val split (0 to 1)
-        :param batch_size: (int) the minibatch size
-        :param traj_limitation: (int) the dims to load (if -1, load all)
-        :param randomize: (bool) if the dataset should be shuffled
-        :param verbose: (int) Verbosity
-        """
         traj_data = np.load(expert_path)
 
         if verbose > 0:
@@ -169,21 +167,25 @@ class ExpertDataset(object):
 
 
 class DataLoader(object):
+    """
+    A custom dataloader to preprocessing observations (including images)
+    and feed them to the network.
+
+    Original code for the dataloader from https://github.com/araffin/robotics-rl-srl (MIT licence)
+    Authors: Antonin Raffin, René Traoré, Ashley Hill
+
+    :param minibatchlist: ([np.ndarray]) list of observations indices (grouped per minibatch)
+    :param observations: (np.ndarray) observations or images path
+    :param actions: (np.ndarray) actions
+    :param n_workers: (int) number of preprocessing worker (for loading the images)
+    :param infinite_loop: (bool) whether to have an iterator that can be resetted
+    :param max_queue_len: (int) Max number of minibatches that can be preprocessed at the same time
+    :param shuffle: (bool) Shuffle the minibatch after each epoch
+    :param start_process: (bool) Start the preprocessing process (default: True)
+    """
     def __init__(self, minibatchlist, observations, actions, n_workers=1,
                  infinite_loop=True, max_queue_len=4, shuffle=False,
                  start_process=True):
-        """
-        A Custom dataloader to preprocessing images and feed them to the network.
-
-        :param minibatchlist: ([np.ndarray]) list of observations indices (grouped per minibatch)
-        :param observations: (np.ndarray) observations or images path
-        :param actions: (np.ndarray) actions
-        :param n_workers: (int) number of preprocessing worker (for loading the images)
-        :param infinite_loop: (bool) whether to have an iterator that can be resetted
-        :param max_queue_len: (int) Max number of minibatches that can be preprocessed at the same time
-        :param shuffle: (bool)
-        :param start_process: (bool)
-        """
         super(DataLoader, self).__init__()
         self.n_workers = n_workers
         self.infinite_loop = infinite_loop
