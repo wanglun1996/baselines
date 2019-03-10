@@ -1,3 +1,5 @@
+import shutil
+
 import gym
 import pytest
 
@@ -44,17 +46,20 @@ def test_generate_cartpole():
 
 
 # @pytest.mark.parametrize("model_class", [A2C, ACER, ACKTR, DQN, PPO1, PPO2, TRPO])
-# def test_pretrain_images():
-#     env = make_atari_env("PongNoFrameskip-v4", num_env=1, seed=0)
-#     env = VecFrameStack(env, n_stack=4)
-#     model = PPO2('CnnPolicy', env)
-#     generate_expert_traj(model, 'expert_pong', n_timesteps=0, n_episodes=1,
-#                          image_folder='/tmp/recorded_images/')
-#
-#     expert_path = 'expert_pong.npz'
-#     dataset = ExpertDataset(expert_path=expert_path, traj_limitation=1, batch_size=32)
-#     model.pretrain(dataset, num_iter=100)
-#     del dataset, model
+def test_pretrain_images():
+    env = make_atari_env("PongNoFrameskip-v4", num_env=1, seed=0)
+    env = VecFrameStack(env, n_stack=4)
+    model = PPO2('CnnPolicy', env)
+    generate_expert_traj(model, 'expert_pong', n_timesteps=0, n_episodes=1,
+                         image_folder='recorded_images/')
+
+    expert_path = 'expert_pong.npz'
+    dataset = ExpertDataset(expert_path=expert_path, traj_limitation=1, batch_size=32)
+    model.pretrain(dataset, num_iter=100)
+
+    shutil.rmtree('recorded_images/')
+    env.close()
+    del dataset, model, env
 
 
 @pytest.mark.parametrize("model_class", [A2C, GAIL, DDPG, PPO1, PPO2, SAC, TRPO])

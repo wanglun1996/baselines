@@ -185,10 +185,12 @@ class DataLoader(object):
     :param max_queue_len: (int) Max number of minibatches that can be preprocessed at the same time
     :param shuffle: (bool) Shuffle the minibatch after each epoch
     :param start_process: (bool) Start the preprocessing process (default: True)
+    :param backend: (str) joblib backend (one of 'multiprocessing', 'sequential', 'threading'
+        or 'loky' in newest versions)
     """
     def __init__(self, minibatchlist, observations, actions, n_workers=1,
-                 infinite_loop=True, max_queue_len=4, shuffle=False,
-                 start_process=True):
+                 infinite_loop=True, max_queue_len=1, shuffle=False,
+                 start_process=True, backend='threading'):
         super(DataLoader, self).__init__()
         self.n_workers = n_workers
         self.infinite_loop = infinite_loop
@@ -200,6 +202,7 @@ class DataLoader(object):
         self.queue = Queue(max_queue_len)
         self.process = None
         self.load_images = isinstance(observations[0], str)
+        self.backend = backend
         if start_process:
             self.start_process()
 
@@ -213,7 +216,7 @@ class DataLoader(object):
 
     def _run(self):
         start = True
-        with Parallel(n_jobs=self.n_workers, batch_size="auto", backend="threading") as parallel:
+        with Parallel(n_jobs=self.n_workers, batch_size="auto", backend=self.backend) as parallel:
             while start or self.infinite_loop:
                 start = False
 
