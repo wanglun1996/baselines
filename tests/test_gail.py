@@ -2,6 +2,8 @@ import gym
 import pytest
 
 from stable_baselines import A2C, ACER, ACKTR, GAIL, DDPG, DQN, PPO1, PPO2, TRPO, SAC
+from stable_baselines.common.cmd_util import make_atari_env
+from stable_baselines.common.vec_env import VecFrameStack
 from stable_baselines.gail import ExpertDataset, generate_expert_traj
 
 EXPERT_PATH = "stable_baselines/gail/dataset/expert_pendulum.npz"
@@ -28,6 +30,7 @@ def test_gail():
         obs, _, done, _ = env.step(action)
         if done:
             obs = env.reset()
+    del dataset, model
 
 
 def test_generate_pendulum():
@@ -38,6 +41,19 @@ def test_generate_pendulum():
 def test_generate_cartpole():
     model = DQN('MlpPolicy', 'CartPole-v1', verbose=1)
     generate_expert_traj(model, 'expert_cartpole', n_timesteps=1000, n_episodes=10)
+
+
+# @pytest.mark.parametrize("model_class", [A2C, ACER, ACKTR, DQN, PPO1, PPO2, TRPO])
+def test_pretrain_images():
+    env = make_atari_env("PongNoFrameskip-v4", num_env=1, seed=0)
+    env = VecFrameStack(env, n_stack=4)
+    model = PPO2('CnnPolicy', env)
+    generate_expert_traj(model, 'expert_pong', n_timesteps=0, n_episodes=1)
+
+    expert_path = 'expert_pong.npz'
+    dataset = ExpertDataset(expert_path=expert_path, traj_limitation=1, batch_size=32)
+    model.pretrain(dataset, num_iter=100)
+    del dataset, model
 
 
 @pytest.mark.parametrize("model_class", [A2C, GAIL, DDPG, PPO1, PPO2, SAC, TRPO])
@@ -52,6 +68,7 @@ def test_behavior_cloning_box(model_class):
         model = model_class("MlpPolicy", "Pendulum-v0")
     model.pretrain(dataset, num_iter=1000)
     model.save("test-pretrain")
+    del dataset, model
 
 
 @pytest.mark.parametrize("model_class", [A2C, ACER, ACKTR, DQN, PPO1, PPO2, TRPO])
@@ -65,3 +82,4 @@ def test_behavior_cloning_discrete(model_class):
         model = model_class("MlpPolicy", "CartPole-v1")
     model.pretrain(dataset, num_iter=1000)
     model.save("test-pretrain")
+    del dataset, model

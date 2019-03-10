@@ -243,14 +243,23 @@ class DataLoader(object):
     @classmethod
     def _make_batch_element(cls, image_path):
         """
+        Process one element.
+
         :param image_path: (str) path to an image
         :return: (np.ndarray)
         """
+        # cv2.IMREAD_UNCHANGED is needed to load
+        # grey and RGBa images
+        image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+        # Grey image
+        if len(image.shape) == 2:
+            image = image[:, :, np.newaxis]
 
-        image = cv2.imread(image_path)
         if image is None:
             raise ValueError("Tried to load {}, but it was not found".format(image_path))
-
+        # Convert from BGR to RGB
+        if image.shape[-1] == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = image.reshape((1,) + image.shape)
         return image
 

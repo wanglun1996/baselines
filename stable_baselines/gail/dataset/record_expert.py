@@ -1,8 +1,15 @@
+import os
+import warnings
+
+import cv2
 import numpy as np
 from gym import spaces
 
+from stable_baselines.common.vec_env import VecEnv, VecFrameStack
 
-def generate_expert_traj(model, save_path, n_timesteps=60000, n_episodes=100):
+
+def generate_expert_traj(model, save_path, n_timesteps=60000,
+                         n_episodes=100, image_folder='recorded_images'):
     """
     Train expert controller (if needed) and record expert trajectories.
     NOTE: only Box and Discrete spaces are supported for now.
@@ -14,12 +21,46 @@ def generate_expert_traj(model, save_path, n_timesteps=60000, n_episodes=100):
     """
     env = model.get_env()
 
+    assert env is not None, "You must set the env in the model"
+
+    is_vec_env = False
+    if isinstance(env, VecEnv):
+        is_vec_env = True
+        assert env.num_envs == 1, 'You must use only one env to record expert data'
+
     # Sanity check
     assert (isinstance(env.observation_space, spaces.Box) or
             isinstance(env.observation_space, spaces.Discrete)), "Observation space type not supported"
 
     assert (isinstance(env.action_space, spaces.Box) or
             isinstance(env.action_space, spaces.Discrete)), "Action space type not supported"
+
+
+    # Check if we need to record images
+    obs_space = env.observation_space
+    record_images = len(obs_space.shape) == 3 and obs_space.shape[-1] in [1, 3, 4]\
+                    and obs_space.dtype == np.uint8
+
+    if not record_images and len(obs_space.shape) == 3 and obs_space.dtype == np.uint8:
+        warnings.warn("The observations looks like images (shape = {}) "
+                      "but the number of channel > 4, so it will be saved in the numpy archive "
+                      "which can lead to high memory usage".format(obs_space.shape))
+
+    image_ext = 'jpg'
+    if record_images:
+        # We save images as jpg or png, that have only 3/4 color channels
+        if isinstance(env, VecFrameStack) and env.n_stack == 4:
+            # assert env.n_stack < 5, "The current data recorder does no support"\
+            #                          "VecFrameStack with n_stack > 4"
+            image_ext = 'png'
+
+        folder_path = os.path.dirname(save_path)
+        image_folder = os.path.join(folder_path, image_folder)
+        os.makedirs(image_folder, exist_ok=True)
+        print("=" * 10)
+        print("Images will be recorded to {}/".format(image_folder))
+        print("Image shape: {}".format(obs_space.shape))
+        print("=" * 10)
 
     if n_timesteps > 0:
         model.learn(n_timesteps)
@@ -34,8 +75,19 @@ def generate_expert_traj(model, save_path, n_timesteps=60000, n_episodes=100):
     obs = env.reset()
     episode_starts.append(True)
     reward_sum = 0.0
+    idx = 0
     while ep_idx < n_episodes:
-        observations.append(obs)
+        if record_images:
+            image_path = os.path.join(image_folder, "{}.{}".format(idx, image_ext))
+            obs_ = obs[0] if is_vec_env else obs
+            # Convert from RGB to BGR
+            # which is the format OpenCV expect
+            if obs_.shape[-1] == 3:
+                obs_ = cv2.cvtColor(obs_, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(image_path, obs_)
+            observations.append(image_path)
+        else:
+            observations.append(obs)
         action, _ = model.predict(obs)
         obs, reward, done, _ = env.step(action)
 
@@ -43,16 +95,19 @@ def generate_expert_traj(model, save_path, n_timesteps=60000, n_episodes=100):
         rewards.append(reward)
         episode_starts.append(done)
         reward_sum += reward
+        idx += 1
         if done:
             obs = env.reset()
             episode_returns[ep_idx] = reward_sum
             reward_sum = 0.0
             ep_idx += 1
 
-    if isinstance(env.observation_space, spaces.Box):
+    if isinstance(env.observation_space, spaces.Box) and not record_images:
         observations = np.concatenate(observations).reshape((-1,) + env.observation_space.shape)
     elif isinstance(env.observation_space, spaces.Discrete):
         observations = np.array(observations).reshape((-1, 1))
+    elif record_images:
+        observations = np.array(observations)
 
     if isinstance(env.action_space, spaces.Box):
         actions = np.concatenate(actions).reshape((-1,) + env.action_space.shape)
