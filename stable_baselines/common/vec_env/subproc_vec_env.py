@@ -65,9 +65,7 @@ class SubprocVecEnv(VecEnv):
             # Use thread safe method, see issue #217.
             # forkserver faster than spawn but not always available.
             forkserver_available = 'forkserver' in multiprocessing.get_all_start_methods()
-            # start_method = 'forkserver' if forkserver_available else 'spawn'
-            # Try to fix CI error
-            start_method = 'fork'
+            start_method = 'forkserver' if forkserver_available else 'spawn'
         ctx = multiprocessing.get_context(start_method)
 
         self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)])

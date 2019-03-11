@@ -14,11 +14,11 @@ EXPERT_PATH_DISCRETE = "stable_baselines/gail/dataset/expert_cartpole.npz"
 
 def test_gail():
     env = gym.make('Pendulum-v0')
-    dataset = ExpertDataset(expert_path=EXPERT_PATH, traj_limitation=10, verbose=1)
+    dataset = ExpertDataset(expert_path=EXPERT_PATH, traj_limitation=10, verbose=0)
 
     # Note: train for 1M steps to have a working policy
     model = GAIL('MlpPolicy', env, adversary_entcoeff=0.0, lam=0.92, max_kl=0.001,
-                 expert_dataset=dataset, hidden_size_adversary=64, verbose=1)
+                 expert_dataset=dataset, hidden_size_adversary=64, verbose=0)
 
     model.learn(1000)
     model.save("GAIL-Pendulum")
@@ -36,12 +36,12 @@ def test_gail():
 
 
 def test_generate_pendulum():
-    model = SAC('MlpPolicy', 'Pendulum-v0', verbose=1)
+    model = SAC('MlpPolicy', 'Pendulum-v0', verbose=0)
     generate_expert_traj(model, 'expert_pendulum', n_timesteps=1000, n_episodes=10)
 
 
 def test_generate_cartpole():
-    model = DQN('MlpPolicy', 'CartPole-v1', verbose=1)
+    model = DQN('MlpPolicy', 'CartPole-v1', verbose=0)
     generate_expert_traj(model, 'expert_cartpole', n_timesteps=1000, n_episodes=10)
 
 

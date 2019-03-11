@@ -174,7 +174,8 @@ class DataLoader(object):
     A custom dataloader to preprocessing observations (including images)
     and feed them to the network.
 
-    Original code for the dataloader from https://github.com/araffin/robotics-rl-srl (MIT licence)
+    Original code for the dataloader from https://github.com/araffin/robotics-rl-srl
+    (MIT licence)
     Authors: Antonin Raffin, René Traoré, Ashley Hill
 
     :param minibatchlist: ([np.ndarray]) list of observations indices (grouped per minibatch)
@@ -187,10 +188,12 @@ class DataLoader(object):
     :param start_process: (bool) Start the preprocessing process (default: True)
     :param backend: (str) joblib backend (one of 'multiprocessing', 'sequential', 'threading'
         or 'loky' in newest versions)
+    :param sequential: (bool) Do not use subprocess to preprocess the data
+        (slower but use less memory for the CI)
     """
     def __init__(self, minibatchlist, observations, actions, n_workers=1,
                  infinite_loop=True, max_queue_len=1, shuffle=False,
-                 start_process=True, backend='threading'):
+                 start_process=True, backend='threading', sequential=True):
         super(DataLoader, self).__init__()
         self.n_workers = n_workers
         self.infinite_loop = infinite_loop
@@ -203,16 +206,45 @@ class DataLoader(object):
         self.process = None
         self.load_images = isinstance(observations[0], str)
         self.backend = backend
+        self.sequential = sequential
+        self.indices = None
+        self.current_minibatch_idx = 0
         if start_process:
             self.start_process()
 
     def start_process(self):
         """Start preprocessing process"""
+        # Skip if in sequential mode
+        if self.sequential:
+            return
         self.process = Process(target=self._run)
         # Make it a deamon, so it will be deleted at the same time
         # of the main process
         self.process.daemon = True
         self.process.start()
+
+    def sequential_next(self):
+        """
+        Sequential version of the pre-processing.
+        """
+        if self.current_minibatch_idx == len(self):
+            raise StopIteration
+
+        if self.current_minibatch_idx == 0:
+            if self.shuffle:
+                self.indices = np.random.permutation(self.n_minibatches).astype(np.int64)
+            else:
+                self.indices = np.arange(len(self.minibatchlist), dtype=np.int64)
+
+        obs = self.observations[self.minibatchlist[self.current_minibatch_idx]]
+        if self.load_images:
+            obs = [self._make_batch_element(image_path)
+                   for image_path in obs]
+            obs = np.concatenate(obs, axis=0)
+
+        actions = self.actions[self.minibatchlist[self.current_minibatch_idx]]
+        self.current_minibatch_idx += 1
+        return obs, actions
 
     def _run(self):
         start = True
@@ -275,9 +307,13 @@ class DataLoader(object):
         return self.n_minibatches
 
     def __iter__(self):
+        self.current_minibatch_idx = 0
         return self
 
     def __next__(self):
+        if self.sequential:
+            return self.sequential_next()
+
         if self.process is None:
             raise ValueError("You must call .start_process() before using the dataloader")
         while True:
