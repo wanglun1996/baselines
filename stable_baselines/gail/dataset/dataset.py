@@ -27,9 +27,12 @@ class ExpertDataset(object):
     :param traj_limitation: (int) the number of trajectory to use (if -1, load all)
     :param randomize: (bool) if the dataset should be shuffled
     :param verbose: (int) Verbosity
+    :param sequential_preprocessing: (bool) Do not use subprocess to preprocess
+        the data (slower but use less memory for the CI)
     """
     def __init__(self, expert_path, train_fraction=0.7, batch_size=64,
-                 traj_limitation=-1, randomize=True, verbose=1):
+                 traj_limitation=-1, randomize=True, verbose=1,
+                 sequential_preprocessing=False):
         traj_data = np.load(expert_path)
 
         if verbose > 0:
@@ -95,12 +98,15 @@ class ExpertDataset(object):
         self.num_transition = len(self.observations)
         self.randomize = randomize
         self.minibatchlist = minibatchlist
+        self.sequential_preprocessing = sequential_preprocessing
 
         self.dataloader = None
         self.train_loader = DataLoader(minibatchlist_train, self.observations, self.actions,
-                                       shuffle=self.randomize, start_process=False)
+                                       shuffle=self.randomize, start_process=False,
+                                       sequential=sequential_preprocessing)
         self.val_loader = DataLoader(minibatchlist_val, self.observations, self.actions,
-                                     shuffle=self.randomize, start_process=False)
+                                     shuffle=self.randomize, start_process=False,
+                                     sequential=sequential_preprocessing)
 
         if self.verbose >= 1:
             self.log_info()
@@ -120,7 +126,8 @@ class ExpertDataset(object):
         if len(minibatchlist) == 0:
             minibatchlist = [np.arange(len(self.observations)).astype(np.int64)]
         self.dataloader = DataLoader(minibatchlist, self.observations, self.actions,
-                                     shuffle=self.randomize, start_process=False)
+                                     shuffle=self.randomize, start_process=False,
+                                     sequential=self.sequential_preprocessing)
 
     def __del__(self):
         del self.dataloader, self.train_loader, self.val_loader
@@ -193,7 +200,7 @@ class DataLoader(object):
     """
     def __init__(self, minibatchlist, observations, actions, n_workers=1,
                  infinite_loop=True, max_queue_len=1, shuffle=False,
-                 start_process=True, backend='threading', sequential=True):
+                 start_process=True, backend='threading', sequential=False):
         super(DataLoader, self).__init__()
         self.n_workers = n_workers
         self.infinite_loop = infinite_loop

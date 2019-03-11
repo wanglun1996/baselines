@@ -14,7 +14,8 @@ EXPERT_PATH_DISCRETE = "stable_baselines/gail/dataset/expert_cartpole.npz"
 
 def test_gail():
     env = gym.make('Pendulum-v0')
-    dataset = ExpertDataset(expert_path=EXPERT_PATH, traj_limitation=10, verbose=0)
+    dataset = ExpertDataset(expert_path=EXPERT_PATH, traj_limitation=10,
+                            sequential_preprocessing=True)
 
     # Note: train for 1M steps to have a working policy
     model = GAIL('MlpPolicy', env, adversary_entcoeff=0.0, lam=0.92, max_kl=0.001,
@@ -54,7 +55,8 @@ def test_pretrain_images():
                          image_folder='recorded_images/')
 
     expert_path = 'expert_pong.npz'
-    dataset = ExpertDataset(expert_path=expert_path, traj_limitation=1, batch_size=32)
+    dataset = ExpertDataset(expert_path=expert_path, traj_limitation=1, batch_size=32,
+                            sequential_preprocessing=True)
     model.pretrain(dataset, num_iter=100)
 
     shutil.rmtree('recorded_images/')
@@ -67,7 +69,8 @@ def test_behavior_cloning_box(model_class):
     """
     Behavior cloning with continuous actions.
     """
-    dataset = ExpertDataset(expert_path=EXPERT_PATH, traj_limitation=10)
+    dataset = ExpertDataset(expert_path=EXPERT_PATH, traj_limitation=10,
+                            sequential_preprocessing=True, verbose=0)
     if model_class == GAIL:
         model = model_class("MlpPolicy", "Pendulum-v0", dataset)
     else:
@@ -79,7 +82,8 @@ def test_behavior_cloning_box(model_class):
 
 @pytest.mark.parametrize("model_class", [A2C, ACER, ACKTR, DQN, PPO1, PPO2, TRPO])
 def test_behavior_cloning_discrete(model_class):
-    dataset = ExpertDataset(expert_path=EXPERT_PATH_DISCRETE, traj_limitation=10)
+    dataset = ExpertDataset(expert_path=EXPERT_PATH_DISCRETE, traj_limitation=10,
+                            sequential_preprocessing=True, verbose=0)
     if model_class == GAIL:
         # TODO: discrete actions support for GAIl
         # model = model_class("MlpPolicy", "CartPole-v1", dataset)
