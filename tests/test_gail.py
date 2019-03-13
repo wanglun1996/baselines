@@ -8,13 +8,16 @@ from stable_baselines.common.cmd_util import make_atari_env
 from stable_baselines.common.vec_env import VecFrameStack
 from stable_baselines.gail import ExpertDataset, generate_expert_traj
 
-EXPERT_PATH = "stable_baselines/gail/dataset/expert_pendulum.npz"
+EXPERT_PATH_PENDULUM = "stable_baselines/gail/dataset/expert_pendulum.npz"
 EXPERT_PATH_DISCRETE = "stable_baselines/gail/dataset/expert_cartpole.npz"
 
 
-def test_gail():
-    env = gym.make('Pendulum-v0')
-    dataset = ExpertDataset(expert_path=EXPERT_PATH, traj_limitation=10,
+@pytest.mark.parametrize("expert_env", [('Pendulum-v0', EXPERT_PATH_PENDULUM),
+                                        ('CartPole-v1', EXPERT_PATH_DISCRETE)])
+def test_gail(expert_env):
+    env_id, expert_path = expert_env
+    env = gym.make(env_id)
+    dataset = ExpertDataset(expert_path=expert_path, traj_limitation=10,
                             sequential_preprocessing=True)
 
     # Note: train for 1M steps to have a working policy
@@ -22,8 +25,8 @@ def test_gail():
                  expert_dataset=dataset, hidden_size_adversary=64, verbose=0)
 
     model.learn(1000)
-    model.save("GAIL-Pendulum")
-    model = model.load("GAIL-Pendulum", env=env)
+    model.save("GAIL-{}".format(env_id))
+    model = model.load("GAIL-{}".format(env_id), env=env)
     model.learn(1000)
 
     obs = env.reset()
@@ -69,27 +72,19 @@ def test_behavior_cloning_box(model_class):
     """
     Behavior cloning with continuous actions.
     """
-    dataset = ExpertDataset(expert_path=EXPERT_PATH, traj_limitation=10,
+    dataset = ExpertDataset(expert_path=EXPERT_PATH_PENDULUM, traj_limitation=10,
                             sequential_preprocessing=True, verbose=0)
-    if model_class == GAIL:
-        model = model_class("MlpPolicy", "Pendulum-v0", dataset)
-    else:
-        model = model_class("MlpPolicy", "Pendulum-v0")
+    model = model_class("MlpPolicy", "Pendulum-v0")
     model.pretrain(dataset, num_iter=1000)
     model.save("test-pretrain")
     del dataset, model
 
 
-@pytest.mark.parametrize("model_class", [A2C, ACER, ACKTR, DQN, PPO1, PPO2, TRPO])
+@pytest.mark.parametrize("model_class", [A2C, ACER, ACKTR, DQN, GAIL, PPO1, PPO2, TRPO])
 def test_behavior_cloning_discrete(model_class):
     dataset = ExpertDataset(expert_path=EXPERT_PATH_DISCRETE, traj_limitation=10,
                             sequential_preprocessing=True, verbose=0)
-    if model_class == GAIL:
-        # TODO: discrete actions support for GAIl
-        # model = model_class("MlpPolicy", "CartPole-v1", dataset)
-        return
-    else:
-        model = model_class("MlpPolicy", "CartPole-v1")
+    model = model_class("MlpPolicy", "CartPole-v1")
     model.pretrain(dataset, num_iter=1000)
     model.save("test-pretrain")
     del dataset, model

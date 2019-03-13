@@ -2,6 +2,7 @@
 Reference: https://github.com/openai/imitation
 I follow the architecture from the official repository
 """
+import gym
 import tensorflow as tf
 import numpy as np
 
@@ -44,30 +45,40 @@ class TransitionClassifier(object):
         :param scope: (str) tensorflow variable scope
         :param normalize: (bool) Wether to normalize the reward or not
         """
+        # TODO: support images properly (using a CNN)
         self.scope = scope
         self.observation_shape = observation_space.shape
         self.actions_shape = action_space.shape
-        self.input_shape = tuple([obs + action for obs, action in zip(self.observation_shape, self.actions_shape)])
-        self.num_actions = action_space.shape[0]
+
+        if isinstance(action_space, gym.spaces.Box):
+            # Continuous action space
+            self.discrete_actions = False
+            self.n_actions = action_space.shape[0]
+        elif isinstance(action_space, gym.spaces.Discrete):
+            self.n_actions = action_space.n
+            self.discrete_actions = True
+        else:
+            raise ValueError('Action space not supported: {}'.format(action_space))
+
         self.hidden_size = hidden_size
         self.normalize = normalize
         self.obs_rms = None
 
         # Placeholders
-        self.generator_obs_ph = tf.placeholder(tf.float32, (None,) + self.observation_shape,
+        self.generator_obs_ph = tf.placeholder(observation_space.dtype, (None,) + self.observation_shape,
                                                name="observations_ph")
-        self.generator_acs_ph = tf.placeholder(tf.float32, (None,) + self.actions_shape,
+        self.generator_acs_ph = tf.placeholder(action_space.dtype, (None,) + self.actions_shape,
                                                name="actions_ph")
-        self.expert_obs_ph = tf.placeholder(tf.float32, (None,) + self.observation_shape,
+        self.expert_obs_ph = tf.placeholder(observation_space.dtype, (None,) + self.observation_shape,
                                             name="expert_observations_ph")
-        self.expert_acs_ph = tf.placeholder(tf.float32, (None,) + self.actions_shape,
+        self.expert_acs_ph = tf.placeholder(action_space.dtype, (None,) + self.actions_shape,
                                             name="expert_actions_ph")
         # Build graph
         generator_logits = self.build_graph(self.generator_obs_ph, self.generator_acs_ph, reuse=False)
         expert_logits = self.build_graph(self.expert_obs_ph, self.expert_acs_ph, reuse=True)
         # Build accuracy
-        generator_acc = tf.reduce_mean(tf.to_float(tf.nn.sigmoid(generator_logits) < 0.5))
-        expert_acc = tf.reduce_mean(tf.to_float(tf.nn.sigmoid(expert_logits) > 0.5))
+        generator_acc = tf.reduce_mean(tf.cast(tf.nn.sigmoid(generator_logits) < 0.5, tf.float32))
+        expert_acc = tf.reduce_mean(tf.cast(tf.nn.sigmoid(expert_logits) > 0.5, tf.float32))
         # Build regression loss
         # let x = logits, z = targets.
         # z * -log(sigmoid(x)) + (1 - z) * -log(1 - sigmoid(x))
@@ -110,7 +121,14 @@ class TransitionClassifier(object):
                 obs = (obs_ph - self.obs_rms.mean) / self.obs_rms.std
             else:
                 obs = obs_ph
-            _input = tf.concat([obs, acs_ph], axis=1)  # concatenate the two input -> form a transition
+
+            if self.discrete_actions:
+                one_hot_actions = tf.one_hot(acs_ph, self.n_actions)
+                actions_ph = tf.cast(one_hot_actions, tf.float32)
+            else:
+                actions_ph = acs_ph
+
+            _input = tf.concat([obs, actions_ph], axis=1)  # concatenate the two input -> form a transition
             p_h1 = tf.contrib.layers.fully_connected(_input, self.hidden_size, activation_fn=tf.nn.tanh)
             p_h2 = tf.contrib.layers.fully_connected(p_h1, self.hidden_size, activation_fn=tf.nn.tanh)
             logits = tf.contrib.layers.fully_connected(p_h2, 1, activation_fn=tf.identity)
@@ -137,6 +155,10 @@ class TransitionClassifier(object):
             obs = np.expand_dims(obs, 0)
         if len(actions.shape) == 1:
             actions = np.expand_dims(actions, 0)
+        elif len(actions.shape) == 0:
+            # one discrete action
+            actions = np.expand_dims(actions, 0)
+
         feed_dict = {self.generator_obs_ph: obs, self.generator_acs_ph: actions}
         reward = sess.run(self.reward_op, feed_dict)
         return reward

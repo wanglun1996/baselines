@@ -430,6 +430,11 @@ class TRPO(ActorCriticRLModel):
                             # update running mean/std for reward_giver
                             if self.reward_giver.normalize:
                                 self.reward_giver.obs_rms.update(np.concatenate((ob_batch, ob_expert), 0))
+                            if isinstance(self.action_space, gym.spaces.Discrete):
+                                if len(ac_batch.shape) == 2:
+                                    ac_batch = ac_batch[:, 0]
+                                if len(ac_expert.shape) == 2:
+                                    ac_expert = ac_expert[:, 0]
                             *newlosses, grad = self.reward_giver.lossandgrad(ob_batch, ac_batch, ob_expert, ac_expert)
                             self.d_adam.update(self.allmean(grad), self.d_stepsize)
                             d_losses.append(newlosses)
@@ -468,7 +473,7 @@ class TRPO(ActorCriticRLModel):
         return self
 
     def save(self, save_path):
-        if self.using_gail:
+        if self.using_gail and self.expert_dataset is not None:
             # Exit processes to pickle the dataset
             self.expert_dataset.prepare_pickling()
         data = {

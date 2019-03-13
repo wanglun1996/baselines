@@ -23,6 +23,8 @@ Pre-Release 2.5.0a0 (WIP)
 - fixed ``close()`` method for DummyVecEnv.
 - added support for Dict spaces in DummyVecEnv and SubprocVecEnv. (@AdamGleave)
 - added support for arbitrary multiprocessing start methods and added a warning about SubprocVecEnv that are not thread-safe by default.  (@AdamGleave)
+- added support for Discrete actions for GAIL
+- fixed deprecation warning for tf: replaces ``tf.to_float()`` by ``tf.cast()``
 
 
 Release 2.4.1 (2019-02-11)
