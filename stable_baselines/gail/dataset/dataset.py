@@ -1,9 +1,3 @@
-"""
-Data structure of the expert .npz:
-the data is save in python dictionary format with keys: 'actions', 'episode_returns', 'rewards', 'obs',
-'episode_starts'
-In case of images, 'obs' contains the relative path to the images.
-"""
 import queue
 import time
 from multiprocessing import Queue, Process
@@ -19,6 +13,11 @@ from stable_baselines import logger
 class ExpertDataset(object):
     """
     Dataset for using behavior cloning or GAIL.
+
+    Data structure of the expert dataset, an ".npz" archive:
+    the data is save in python dictionary format with keys: 'actions', 'episode_returns',
+    'rewards', 'obs', 'episode_starts'
+    In case of images, 'obs' contains the relative path to the images.
 
     :param expert_path: (str) the path to trajectory data (.npz file)
     :param train_fraction: (float) the train validation split (0 to 1)
@@ -113,6 +112,8 @@ class ExpertDataset(object):
 
     def init_dataloader(self, batch_size):
         """
+        Initialize the dataloader used by GAIL.
+
         :param batch_size: (int)
         """
         indices = np.random.permutation(len(self.observations)).astype(np.int64)
@@ -140,7 +141,7 @@ class ExpertDataset(object):
 
     def log_info(self):
         """
-        Log the information of the dataset
+        Log the information of the dataset.
         """
         logger.log("Total trajectories: {}".format(self.num_traj))
         logger.log("Total transitions: {}".format(self.num_transition))
@@ -149,7 +150,7 @@ class ExpertDataset(object):
 
     def get_next_batch(self, split=None):
         """
-        Get the batch from the dataset
+        Get the batch from the dataset.
 
         :param split: (str) the type of data split (can be None, 'train', 'val')
         :return: (np.ndarray, np.ndarray) inputs and labels

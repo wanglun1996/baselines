@@ -41,10 +41,9 @@ def generate_expert_traj(model, save_path, n_timesteps=0,
     assert (isinstance(env.action_space, spaces.Box) or
             isinstance(env.action_space, spaces.Discrete)), "Action space type not supported"
 
-
     # Check if we need to record images
     obs_space = env.observation_space
-    record_images = len(obs_space.shape) == 3 and obs_space.shape[-1] in [1, 3, 4]\
+    record_images = len(obs_space.shape) == 3 and obs_space.shape[-1] in [1, 3, 4] \
                     and obs_space.dtype == np.uint8
 
     if not record_images and len(obs_space.shape) == 3 and obs_space.dtype == np.uint8:

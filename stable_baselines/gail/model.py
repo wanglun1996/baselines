@@ -1,5 +1,3 @@
-import gym
-
 from stable_baselines.common import ActorCriticRLModel
 from stable_baselines.common.policies import ActorCriticPolicy
 from stable_baselines.trpo_mpi import TRPO
@@ -8,6 +6,11 @@ from stable_baselines.trpo_mpi import TRPO
 class GAIL(ActorCriticRLModel):
     """
     Generative Adversarial Imitation Learning (GAIL)
+
+    .. warning::
+
+        Images are not yet handled properly by the current implementation
+
 
     :param policy: (ActorCriticPolicy or str) The policy model to use (MlpPolicy, CnnPolicy, CnnLstmPolicy, ...)
     :param env: (Gym environment or str) The environment to learn from (if registered in Gym, can be str)

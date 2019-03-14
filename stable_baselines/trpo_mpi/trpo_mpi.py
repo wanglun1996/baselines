@@ -40,6 +40,7 @@ class TRPO(ActorCriticRLModel):
     :param full_tensorboard_log: (bool) enable additional logging when using tensorboard
         WARNING: this logging can take a lot of space quickly
     """
+
     def __init__(self, policy, env, gamma=0.99, timesteps_per_batch=1024, max_kl=0.01, cg_iters=10, lam=0.98,
                  entcoeff=0.0, cg_damping=1e-2, vf_stepsize=3e-4, vf_iters=3, verbose=0, tensorboard_log=None,
                  _init_setup_model=True, policy_kwargs=None, full_tensorboard_log=False):
@@ -201,7 +202,8 @@ class TRPO(ActorCriticRLModel):
                             print(colorize(msg, color='magenta'))
                             start_time = time.time()
                             yield
-                            print(colorize("done in %.3f seconds" % (time.time() - start_time), color='magenta'))
+                            print(colorize("done in {:.3f} seconds".format((time.time() - start_time)),
+                                           color='magenta'))
                         else:
                             yield
 
@@ -275,13 +277,13 @@ class TRPO(ActorCriticRLModel):
                 timesteps_so_far = 0
                 iters_so_far = 0
                 t_start = time.time()
-                lenbuffer = deque(maxlen=40)  # rolling buffer for episode lengths
-                rewbuffer = deque(maxlen=40)  # rolling buffer for episode rewards
+                len_buffer = deque(maxlen=40)  # rolling buffer for episode lengths
+                reward_buffer = deque(maxlen=40)  # rolling buffer for episode rewards
                 self.episode_reward = np.zeros((self.n_envs,))
 
-                true_rewbuffer = None
+                true_reward_buffer = None
                 if self.using_gail:
-                    true_rewbuffer = deque(maxlen=40)
+                    true_reward_buffer = deque(maxlen=40)
 
                     # Initialize dataloader
                     batchsize = self.timesteps_per_batch // self.d_step
@@ -360,7 +362,7 @@ class TRPO(ActorCriticRLModel):
                         if np.allclose(grad, 0):
                             logger.log("Got zero gradient. not updating")
                         else:
-                            with self.timed("cg"):
+                            with self.timed("conjugate_gradient"):
                                 stepdir = conjugate_gradient(fisher_vector_product, grad, cg_iters=self.cg_iters,
                                                              verbose=self.rank == 0 and self.verbose >= 1)
                             assert np.isfinite(stepdir).all()
@@ -410,18 +412,17 @@ class TRPO(ActorCriticRLModel):
                     for (loss_name, loss_val) in zip(self.loss_names, mean_losses):
                         logger.record_tabular(loss_name, loss_val)
 
-                    logger.record_tabular("ev_tdlam_before", explained_variance(vpredbefore, tdlamret))
+                    logger.record_tabular("explained_variance_tdlam_before",
+                                          explained_variance(vpredbefore, tdlamret))
 
                     if self.using_gail:
                         # ------------------ Update D ------------------
                         logger.log("Optimizing Discriminator...")
                         logger.log(fmt_row(13, self.reward_giver.loss_name))
-                        # NOTE: unused variables ?
-                        # NOTE: uses only the g step for observation
-                        # ob_expert, ac_expert = self.expert_dataset.get_next_batch(len(observation))
                         assert len(observation) == self.timesteps_per_batch
                         batch_size = self.timesteps_per_batch // self.d_step
 
+                        # NOTE: uses only the last g step for observation
                         d_losses = []  # list of tuples, each of which gives the loss for a minibatch
                         for ob_batch, ac_batch in dataset.iterbatches((observation, action),
                                                                       include_final_partial_batch=False,
@@ -430,6 +431,8 @@ class TRPO(ActorCriticRLModel):
                             # update running mean/std for reward_giver
                             if self.reward_giver.normalize:
                                 self.reward_giver.obs_rms.update(np.concatenate((ob_batch, ob_expert), 0))
+
+                            # Reshape actions if needed when using discrete actions
                             if isinstance(self.action_space, gym.spaces.Discrete):
                                 if len(ac_batch.shape) == 2:
                                     ac_batch = ac_batch[:, 0]
@@ -440,22 +443,24 @@ class TRPO(ActorCriticRLModel):
                             d_losses.append(newlosses)
                         logger.log(fmt_row(13, np.mean(d_losses, axis=0)))
 
-                        lrlocal = (seg["ep_lens"], seg["ep_rets"], seg["ep_true_rets"])  # local values
-                        listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal)  # list of tuples
-                        lens, rews, true_rets = map(flatten_lists, zip(*listoflrpairs))
-                        true_rewbuffer.extend(true_rets)
+                        # lr: lengths and rewards
+                        lr_local = (seg["ep_lens"], seg["ep_rets"], seg["ep_true_rets"])  # local values
+                        list_lr_pairs = MPI.COMM_WORLD.allgather(lr_local)  # list of tuples
+                        lens, rews, true_rets = map(flatten_lists, zip(*list_lr_pairs))
+                        true_reward_buffer.extend(true_rets)
                     else:
-                        lrlocal = (seg["ep_lens"], seg["ep_rets"])  # local values
-                        listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal)  # list of tuples
-                        lens, rews = map(flatten_lists, zip(*listoflrpairs))
-                    lenbuffer.extend(lens)
-                    rewbuffer.extend(rews)
+                        # lr: lengths and rewards
+                        lr_local = (seg["ep_lens"], seg["ep_rets"])  # local values
+                        list_lr_pairs = MPI.COMM_WORLD.allgather(lr_local)  # list of tuples
+                        lens, rews = map(flatten_lists, zip(*list_lr_pairs))
+                    len_buffer.extend(lens)
+                    reward_buffer.extend(rews)
 
-                    if len(lenbuffer) > 0:
-                        logger.record_tabular("EpLenMean", np.mean(lenbuffer))
-                        logger.record_tabular("EpRewMean", np.mean(rewbuffer))
+                    if len(len_buffer) > 0:
+                        logger.record_tabular("EpLenMean", np.mean(len_buffer))
+                        logger.record_tabular("EpRewMean", np.mean(reward_buffer))
                     if self.using_gail:
-                        logger.record_tabular("EpTrueRewMean", np.mean(true_rewbuffer))
+                        logger.record_tabular("EpTrueRewMean", np.mean(true_reward_buffer))
                     logger.record_tabular("EpThisIter", len(lens))
                     episodes_so_far += len(lens)
                     current_it_timesteps = MPI.COMM_WORLD.allreduce(seg["total_timestep"])
