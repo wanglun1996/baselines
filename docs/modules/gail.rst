@@ -19,6 +19,12 @@ Notes
 
 - Original paper: https://arxiv.org/abs/1606.03476
 
+.. warning::
+
+    Images are not yet handled properly by the current implementation
+
+
+
 If you want to train an imitation learning agent
 ------------------------------------------------
 
