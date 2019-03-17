@@ -60,7 +60,7 @@ def test_pretrain_images():
     expert_path = 'expert_pong.npz'
     dataset = ExpertDataset(expert_path=expert_path, traj_limitation=1, batch_size=32,
                             sequential_preprocessing=True)
-    model.pretrain(dataset, num_iter=100)
+    model.pretrain(dataset, n_epochs=2)
 
     shutil.rmtree('recorded_images/')
     env.close()
@@ -75,7 +75,7 @@ def test_behavior_cloning_box(model_class):
     dataset = ExpertDataset(expert_path=EXPERT_PATH_PENDULUM, traj_limitation=10,
                             sequential_preprocessing=True, verbose=0)
     model = model_class("MlpPolicy", "Pendulum-v0")
-    model.pretrain(dataset, num_iter=1000)
+    model.pretrain(dataset, n_epochs=20)
     model.save("test-pretrain")
     del dataset, model
 
@@ -85,6 +85,6 @@ def test_behavior_cloning_discrete(model_class):
     dataset = ExpertDataset(expert_path=EXPERT_PATH_DISCRETE, traj_limitation=10,
                             sequential_preprocessing=True, verbose=0)
     model = model_class("MlpPolicy", "CartPole-v1")
-    model.pretrain(dataset, num_iter=1000)
+    model.pretrain(dataset, n_epochs=10)
     model.save("test-pretrain")
     del dataset, model

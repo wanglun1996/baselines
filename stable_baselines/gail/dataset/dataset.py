@@ -15,7 +15,7 @@ class ExpertDataset(object):
     Dataset for using behavior cloning or GAIL.
 
     Data structure of the expert dataset, an ".npz" archive:
-    the data is save in python dictionary format with keys: 'actions', 'episode_returns',
+    the data is saved in python dictionary format with keys: 'actions', 'episode_returns',
     'rewards', 'obs', 'episode_starts'
     In case of images, 'obs' contains the relative path to the images.
 

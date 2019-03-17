@@ -57,10 +57,10 @@ class GAIL(ActorCriticRLModel):
     def _get_pretrain_placeholders(self):
         pass
 
-    def pretrain(self, dataset, num_iter=1000,
-                 learning_rate=1e-4, adam_epsilon=1e-8):
-        self.trpo.pretrain(dataset, num_iter=num_iter,
-                           learning_rate=learning_rate, adam_epsilon=adam_epsilon)
+    def pretrain(self, dataset, n_epochs=10, learning_rate=1e-4,
+                 adam_epsilon=1e-8, val_interval=None):
+        self.trpo.pretrain(dataset, n_epochs=n_epochs, learning_rate=learning_rate,
+                           adam_epsilon=adam_epsilon, val_interval=val_interval)
         return self
 
     def set_env(self, env):

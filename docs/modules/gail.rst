@@ -6,10 +6,10 @@
 GAIL
 ====
 
-The `Generative Adversarial Imitation Learning (GAIL) <https://arxiv.org/abs/1606.03476>`_ uses expert trajectory
+The `Generative Adversarial Imitation Learning (GAIL) <https://arxiv.org/abs/1606.03476>`_ uses expert trajectories
 to recover a cost function and then learn a policy.
 
-Learning a cost function from expert demonstration is called Inverse Reinforcement Learning (IRL).
+Learning a cost function from expert demonstrations is called Inverse Reinforcement Learning (IRL).
 The connection between GAIL and Generative Adversarial Networks (GANs) is that it uses a discriminator that tries
 to seperate expert trajectory from trajectories of the learned policy, which has the role of the generator here.
 
