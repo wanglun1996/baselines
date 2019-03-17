@@ -25,6 +25,9 @@ Pre-Release 2.5.0a0 (WIP)
 - added support for arbitrary multiprocessing start methods and added a warning about SubprocVecEnv that are not thread-safe by default.  (@AdamGleave)
 - added support for Discrete actions for GAIL
 - fixed deprecation warning for tf: replaces ``tf.to_float()`` by ``tf.cast()``
+- fixed bug in saving and loading ddpg model when using normalization of obs or returns (@tperol)
+- changed DDPG default buffer size from 100 to 50000.
+- fixed a bug in ``ddpg.py`` in ``combined_stats`` for eval. Computed mean on ``eval_episode_rewards`` and ``eval_qs`` (@keshaviyengar)
 
 
 Release 2.4.1 (2019-02-11)
@@ -258,4 +261,4 @@ Contributors (since v2.0.0):
 In random order...
 
 Thanks to @bjmuld @iambenzo @iandanforth @r7vme @brendenpetersen @huvar @abhiskk @JohannesAck
-@EliasHasle @mrakgr @Bleyddyn @antoine-galataud @junhyeokahn @AdamGleave
+@EliasHasle @mrakgr @Bleyddyn @antoine-galataud @junhyeokahn @AdamGleave @keshaviyengar @tperol
