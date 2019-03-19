@@ -478,9 +478,6 @@ class TRPO(ActorCriticRLModel):
         return self
 
     def save(self, save_path):
-        if self.using_gail and self.expert_dataset is not None:
-            # Exit processes to pickle the dataset
-            self.expert_dataset.prepare_pickling()
         data = {
             "gamma": self.gamma,
             "timesteps_per_batch": self.timesteps_per_batch,

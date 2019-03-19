@@ -133,11 +133,14 @@ class ExpertDataset(object):
     def __del__(self):
         del self.dataloader, self.train_loader, self.val_loader
 
-    def prepare_pickling(self):
+    def __getstate__(self):
         """
-        Exit processes in order to pickle the dataset.
+        Modify internal representation for pickling
         """
-        self.dataloader, self.train_loader, self.val_loader = None, None, None
+        attr_dict = self.__dict__.copy()
+        for attr in 'dataloader', 'train_loader', 'val_loader':
+            attr_dict[attr] = None
+        return attr_dict
 
     def log_info(self):
         """
