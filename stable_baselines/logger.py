@@ -180,18 +180,30 @@ class CSVOutputFormat(KVWriter):
         self.file.close()
 
 
+def extract_timesteps_from_kvs(step, kvs):
+    # field missing in DDPG, GAIL, HER
+    fields = [
+        'total_timesteps',  # A2C, ACER, AKTR, PPO2
+        'steps',  # DQN
+        'TimestepsSoFar',  # PPO1, TRPO MPI
+        'total timesteps'  # SAC
+    ]
+    for f in fields:
+        if f in kvs:
+            step = int(kvs[f])
+            break
+
+    return step
+
+
 class TensorBoardOutputFormat(KVWriter):
-    def __init__(self, folder):
+    def __init__(self, folder, step_fn=extract_timesteps_from_kvs):
         """
         Dumps key/value pairs into TensorBoard's numeric format.
 
         :param folder: (str) the folder to write the log to
+        :param step_fn: ((int,dict)->int) function returning step to log.
         """
-        os.makedirs(folder, exist_ok=True)
-        self.dir = folder
-        self.step = 1
-        prefix = 'events'
-        path = os.path.join(os.path.abspath(folder), prefix)
         import tensorflow as tf
         from tensorflow.python import pywrap_tensorflow
         from tensorflow.core.util import event_pb2
@@ -199,7 +211,15 @@ class TensorBoardOutputFormat(KVWriter):
         self._tf = tf
         self.event_pb2 = event_pb2
         self.pywrap_tensorflow = pywrap_tensorflow
+
+        os.makedirs(folder, exist_ok=True)
+        self.dir = folder
+        prefix = 'events'
+        path = os.path.join(os.path.abspath(folder), prefix)
         self.writer = pywrap_tensorflow.EventsWriter(compat.as_bytes(path))
+
+        self.step_fn = step_fn
+        self.step = 1
 
     def writekvs(self, kvs):
         def summary_val(key, value):
@@ -208,7 +228,7 @@ class TensorBoardOutputFormat(KVWriter):
 
         summary = self._tf.Summary(value=[summary_val(k, v) for k, v in kvs.items()])
         event = self.event_pb2.Event(wall_time=time.time(), summary=summary)
-        event.step = self.step  # is there any reason why you'd want to specify the step?
+        event.step = self.step_fn(self.step, kvs)
         self.writer.WriteEvent(event)
         self.writer.Flush()
         self.step += 1
