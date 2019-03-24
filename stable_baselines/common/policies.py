@@ -105,6 +105,8 @@ class BasePolicy(ABC):
     :param add_action_ph: (bool) whether or not to create an action placeholder
     """
 
+    recurrent = False
+
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, scale=False,
                  obs_phs=None, add_action_ph=False):
         self.n_env = n_env
@@ -267,6 +269,8 @@ class LstmPolicy(ActorCriticPolicy):
     :param feature_extraction: (str) The feature extraction type ("cnn" or "mlp")
     :param kwargs: (dict) Extra keyword arguments for the nature CNN feature extraction
     """
+
+    recurrent = True
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm=256, reuse=False, layers=None,
                  net_arch=None, act_fun=tf.tanh, cnn_extractor=nature_cnn, layer_norm=False, feature_extraction="cnn",
