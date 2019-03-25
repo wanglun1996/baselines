@@ -490,7 +490,6 @@ class TRPO(ActorCriticRLModel):
             "vf_iters": self.vf_iters,
             "hidden_size_adversary": self.hidden_size_adversary,
             "adversary_entcoeff": self.adversary_entcoeff,
-            "expert_dataset": self.expert_dataset,
             "g_step": self.g_step,
             "d_step": self.d_step,
             "d_stepsize": self.d_stepsize,
