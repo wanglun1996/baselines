@@ -343,9 +343,11 @@ class StatefulActorCriticPolicy(ActorCriticPolicy):
 
         with tf.variable_scope("input", reuse=False):
             self._dones_ph = tf.placeholder(tf.float32, [n_batch], name="dones_ph")  # (done t-1)
-            self._states_ph = tf.placeholder(tf.float32, [self.n_env] + state_shape, name="states_ph")
+            state_ph_shape = [self.n_env] + list(state_shape)
+            self._states_ph = tf.placeholder(tf.float32, state_ph_shape, name="states_ph")
 
-        self._initial_state = np.zeros((self.n_env, ) + state_shape, dtype=np.float32)
+        initial_state_shape = (self.n_env, ) + tuple(state_shape)
+        self._initial_state = np.zeros(initial_state_shape, dtype=np.float32)
 
     @property
     def initial_state(self):
@@ -392,7 +394,7 @@ class LstmPolicy(StatefulActorCriticPolicy):
                  **kwargs):
         # state_shape = [n_lstm * 2] dim because of the cell and hidden states of the LSTM
         super(LstmPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch,
-                                         state_shape=[2 * n_lstm], reuse=reuse,
+                                         state_shape=(2 * n_lstm, ), reuse=reuse,
                                          scale=(feature_extraction == "cnn"))
 
         self._kwargs_check(feature_extraction, kwargs)

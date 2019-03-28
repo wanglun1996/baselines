@@ -126,7 +126,7 @@ class A2C(ActorCriticRLModel):
                     neglogpac = train_model.proba_distribution.neglogp(self.actions_ph)
                     self.entropy = tf.reduce_mean(train_model.proba_distribution.entropy())
                     self.pg_loss = tf.reduce_mean(self.advs_ph * neglogpac)
-                    self.vf_loss = mse(tf.squeeze(train_model._value), self.rewards_ph)
+                    self.vf_loss = mse(tf.squeeze(train_model.value_flat), self.rewards_ph)
                     loss = self.pg_loss - self.entropy * self.ent_coef + self.vf_loss * self.vf_coef
 
                     tf.summary.scalar('entropy_loss', self.entropy)
