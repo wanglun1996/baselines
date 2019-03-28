@@ -1,6 +1,6 @@
 import warnings
 from itertools import zip_longest
-from abc import ABC
+from abc import ABC, abstractmethod
 
 import numpy as np
 import tensorflow as tf
@@ -119,7 +119,8 @@ class BasePolicy(ABC):
 
             self._action_ph = None
             if add_action_ph:
-                self._action_ph = tf.placeholder(dtype=ac_space.dtype, shape=(n_batch,) + ac_space.shape, name="action_ph")
+                self._action_ph = tf.placeholder(dtype=ac_space.dtype, shape=(n_batch,) + ac_space.shape,
+                                                 name="action_ph")
         self.sess = sess
         self.reuse = reuse
         self.ob_space = ob_space
@@ -175,6 +176,7 @@ class BasePolicy(ABC):
         if feature_extraction == 'mlp' and len(kwargs) > 0:
             raise ValueError("Unknown keywords for policy: {}".format(kwargs))
 
+    @abstractmethod
     def step(self, obs, state=None, mask=None):
         """
         Returns the policy for a single step
@@ -186,6 +188,7 @@ class BasePolicy(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def proba_step(self, obs, state=None, mask=None):
         """
         Returns the action probability for a single step
@@ -289,6 +292,7 @@ class ActorCriticPolicy(BasePolicy):
         """tf.Tensor: parameters of the probability distribution. Depends on pdtype."""
         return self._policy_proba
 
+    @abstractmethod
     def step(self, obs, state=None, mask=None, deterministic=False):
         """
         Returns the policy for a single step
@@ -301,17 +305,7 @@ class ActorCriticPolicy(BasePolicy):
         """
         raise NotImplementedError
 
-    def proba_step(self, obs, state=None, mask=None):
-        """
-        Returns the action probability for a single step
-
-        :param obs: ([float] or [int]) The current observation of the environment
-        :param state: ([float]) The last states (used in recurrent policies)
-        :param mask: ([float]) The last masks (used in recurrent policies)
-        :return: ([float]) the action probability
-        """
-        raise NotImplementedError
-
+    @abstractmethod
     def value(self, obs, state=None, mask=None):
         """
         Returns the value for a single step
