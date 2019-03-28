@@ -14,6 +14,7 @@ Pre-release 2.4.2a (WIP)
 - changed DDPG default buffer size from 100 to 50000.
 - fixed a bug in ``ddpg.py`` in ``combined_stats`` for eval. Computed mean on ``eval_episode_rewards`` and ``eval_qs``
 - fixed a bug in ``setup.py`` that would error on non-GPU systems without TensorFlow installed
+- clarified the public interface of ``BasePolicy`` and ``ActorCriticPolicy`` and support for custom stateful policies.
 
 
 Release 2.4.1 (2019-02-11)
