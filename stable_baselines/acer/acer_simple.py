@@ -429,9 +429,9 @@ class ACER(ActorCriticRLModel):
 
         if states is not None:
             td_map[self.train_model.states_ph] = states
-            td_map[self.train_model.masks_ph] = masks
+            td_map[self.train_model.dones_ph] = masks
             td_map[self.polyak_model.states_ph] = states
-            td_map[self.polyak_model.masks_ph] = masks
+            td_map[self.polyak_model.dones_ph] = masks
 
         if writer is not None:
             # run loss backprop with summary, but once every 10 runs save the metadata (memory, compute time, ...)

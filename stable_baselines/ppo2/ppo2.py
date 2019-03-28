@@ -228,7 +228,7 @@ class PPO2(ActorCriticRLModel):
                   self.old_neglog_pac_ph: neglogpacs, self.old_vpred_ph: values}
         if states is not None:
             td_map[self.train_model.states_ph] = states
-            td_map[self.train_model.masks_ph] = masks
+            td_map[self.train_model.dones_ph] = masks
 
         if states is None:
             update_fac = self.n_batch // self.nminibatches // self.noptepochs + 1
