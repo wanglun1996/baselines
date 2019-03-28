@@ -3,7 +3,7 @@ import numpy as np
 import gym
 
 from stable_baselines.common import BaseRLModel, SetVerbosity
-from stable_baselines.common.policies import LstmPolicy, ActorCriticPolicy
+from stable_baselines.common.policies import ActorCriticPolicy
 
 
 def make_sample_her_transitions(replay_strategy, replay_k, reward_fun):

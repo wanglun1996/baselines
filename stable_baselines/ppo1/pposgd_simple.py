@@ -9,7 +9,7 @@ from stable_baselines.common import Dataset, explained_variance, fmt_row, zipsam
     TensorboardWriter
 from stable_baselines import logger
 import stable_baselines.common.tf_util as tf_util
-from stable_baselines.common.policies import LstmPolicy, ActorCriticPolicy
+from stable_baselines.common.policies import ActorCriticPolicy
 from stable_baselines.common.mpi_adam import MpiAdam
 from stable_baselines.common.mpi_moments import mpi_moments
 from stable_baselines.trpo_mpi.utils import traj_segment_generator, add_vtarg_and_adv, flatten_lists
