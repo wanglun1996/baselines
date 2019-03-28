@@ -1,9 +1,16 @@
 import os
 
+from gym.envs.classic_control import CartPoleEnv
+from gym.wrappers.time_limit import TimeLimit
+from gym import spaces
+import numpy as np
 import pytest
 
-from stable_baselines import A2C, ACER, ACKTR, PPO2
+from stable_baselines import A2C, ACER, ACKTR, PPO2, bench
 from stable_baselines.common.policies import MlpLstmPolicy, LstmPolicy
+from stable_baselines.common.vec_env import SubprocVecEnv
+from stable_baselines.common.vec_env.vec_normalize import VecNormalize
+from stable_baselines.ppo2.ppo2 import safe_mean
 
 
 class CustomLSTMPolicy1(LstmPolicy):
@@ -31,7 +38,33 @@ class CustomLSTMPolicy4(LstmPolicy):
                          layer_norm=True, feature_extraction="mlp", **_kwargs)
 
 
+def _pos_obs(full_obs):
+    x, x_dot, theta, theta_dot = full_obs
+    return x, theta
+
+
+class CartPoleNoVelEnv(CartPoleEnv):
+    """Variant of CartPoleEnv with velocity information removed. This task requires memory to solve."""
+
+    def __init__(self):
+        super().__init__()
+        idxs = [0, 2]
+        low = self.observation_space.low[idxs]
+        high = self.observation_space.high[idxs]
+        print(low)
+        self.observation_space = spaces.Box(low, high, dtype=np.float32)
+
+    def reset(self):
+        full_obs = super().reset()
+        return _pos_obs(full_obs)
+
+    def step(self, action):
+        full_obs, rew, done, info = super().step(action)
+        return _pos_obs(full_obs), rew, done, info
+
+
 N_TRIALS = 100
+NUM_ENVS = 16
 
 MODELS = [A2C, ACER, ACKTR, PPO2]
 LSTM_POLICIES = [MlpLstmPolicy, CustomLSTMPolicy1, CustomLSTMPolicy2, CustomLSTMPolicy3, CustomLSTMPolicy4]
@@ -63,3 +96,37 @@ def test_lstm_policy(model_class, policy):
     finally:
         if os.path.exists("./test_model"):
             os.remove("./test_model")
+
+
+@pytest.mark.expensive
+def test_lstm_train():
+    """Test that LSTM models are able to achieve >=450 (out of 500) reward on CartPoleNoVelEnv.
+
+    This environment requires memory to perform well in."""
+    def make_env(i):
+        env = CartPoleNoVelEnv()
+        env = TimeLimit(env, max_episode_steps=500)
+        env = bench.Monitor(env, None, allow_early_resets=True)
+        env.seed(i)
+        return env
+
+    env = SubprocVecEnv([lambda: make_env(i) for i in range(NUM_ENVS)])
+    env = VecNormalize(env)
+    model = PPO2(MlpLstmPolicy, env, n_steps=128, nminibatches=NUM_ENVS, lam=0.95, gamma=0.99,
+                 noptepochs=10, ent_coef=0.0, learning_rate=3e-4, cliprange=0.2, verbose=1)
+
+    eprewmeans = []
+    def reward_callback(locals, globals):
+        nonlocal eprewmeans
+        eprewmeans.append(safe_mean([ep_info['r'] for ep_info in locals['ep_info_buf']]))
+
+    model.learn(total_timesteps=100000, seed=0, callback=reward_callback)
+
+    # Maximum episode reward is 500.
+    # In CartPole-v1, a non-recurrent policy can easily get >= 450.
+    # In CartPoleNoVelEnv, a non-recurrent policy doesn't get more than ~50.
+    # LSTM policies can reach above 400, but it varies a lot between runs; consistently get >=150.
+    # See PR #244 for more detailed benchmarks.
+
+    average_reward = sum(eprewmeans[-4:]) / 4
+    assert average_reward >= 150, "Mean reward below 200; per-episode rewards {}".format(average_reward)
