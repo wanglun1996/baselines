@@ -125,6 +125,10 @@ class BasePolicy(ABC):
         self.ob_space = ob_space
         self.ac_space = ac_space
 
+    @property
+    def initial_state(self):
+        return None
+
     @staticmethod
     def _kwargs_check(feature_extraction, kwargs):
         """
@@ -189,7 +193,6 @@ class ActorCriticPolicy(BasePolicy):
         self.proba_distribution = None
         self.value_fn = None
         self.deterministic_action = None
-        self.initial_state = None
 
     def _setup_init(self):
         """
@@ -375,8 +378,12 @@ class LstmPolicy(ActorCriticPolicy):
                 # TODO: why not init_scale = 0.001 here like in the feedforward
                 self.proba_distribution, self.policy, self.q_value = \
                     self.pdtype.proba_distribution_from_latent(latent_policy, latent_value)
-        self.initial_state = np.zeros((self.n_env, n_lstm * 2), dtype=np.float32)
+        self._initial_state = np.zeros((self.n_env, self.n_lstm * 2), dtype=np.float32)
         self._setup_init()
+
+    @property
+    def initial_state(self):
+        return self._initial_state
 
     def step(self, obs, state=None, mask=None, deterministic=False):
         if deterministic:
@@ -444,7 +451,6 @@ class FeedForwardPolicy(ActorCriticPolicy):
             self.proba_distribution, self.policy, self.q_value = \
                 self.pdtype.proba_distribution_from_latent(pi_latent, vf_latent, init_scale=0.01)
 
-        self.initial_state = None
         self._setup_init()
 
     def step(self, obs, state=None, mask=None, deterministic=False):
