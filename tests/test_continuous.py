@@ -62,12 +62,13 @@ def test_model_manipulation(model_class):
         acc_reward = sum(acc_reward) / N_TRIALS
 
         # saving
-        model.save("./test_model")
+        model_fname = './test_model_{}'.format(model_class)
+        model.save(model_fname)
 
         del model, env
 
         # loading
-        model = model_class.load("./test_model")
+        model = model_class.load(model_fname)
 
         # changing environment (note: this can be done at loading)
         env = DummyVecEnv([lambda: IdentityEnvBox(eps=0.5)])
