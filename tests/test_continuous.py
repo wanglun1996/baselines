@@ -37,7 +37,7 @@ MODEL_LIST = [
 
 @pytest.mark.slow
 @pytest.mark.parametrize("model_class", MODEL_LIST)
-def test_model_manipulation(model_class):
+def test_model_manipulation(request, model_class):
     """
     Test if the algorithm can be loaded and saved without any issues, the environment switching
     works and that the action prediction works
@@ -62,7 +62,7 @@ def test_model_manipulation(model_class):
         acc_reward = sum(acc_reward) / N_TRIALS
 
         # saving
-        model_fname = './test_model_{}'.format(model_class)
+        model_fname = './test_model_{}'.format(request.node.name)
         model.save(model_fname)
 
         del model, env

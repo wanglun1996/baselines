@@ -30,13 +30,15 @@ STORE_METHODS = [
 @pytest.mark.slow
 @pytest.mark.parametrize("model_class", MODEL_LIST)
 @pytest.mark.parametrize("storage_method", STORE_METHODS)
-def test_model_manipulation(model_class, storage_method):
+def test_model_manipulation(request, model_class, storage_method):
     """
     Test if the algorithm (with a given policy) can be loaded and saved without any issues, the environment switching
     works and that the action prediction works
 
     :param model_class: (BaseRLModel) A RL model
     """
+
+    model_fname = './test_model_{}'.format(request.node.name)
 
     try:
         env = DummyVecEnv([lambda: IdentityEnv(10)])
@@ -70,7 +72,6 @@ def test_model_manipulation(model_class, storage_method):
 
         # saving
         if storage_method == "path":  # saving to a path
-            model_fname = './test_model_{}_{}'.format(model_class, storage_method)
             model.save(model_fname)
         else:  # saving to a file-like object (BytesIO in this case)
             b_io = BytesIO()

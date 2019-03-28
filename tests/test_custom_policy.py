@@ -65,7 +65,7 @@ MODEL_DICT = {
 
 
 @pytest.mark.parametrize("model_name", MODEL_DICT.keys())
-def test_custom_policy(model_name):
+def test_custom_policy(request, model_name):
     """
     Test if the algorithm (with a custom policy) can be loaded and saved without any issues.
     :param model_name: (str) A RL model
@@ -89,7 +89,7 @@ def test_custom_policy(model_name):
                 model.action_probability(obs)
             obs, _, _, _ = env.step(action)
         # saving
-        model_fname = './test_model_{}'.format(model_name)
+        model_fname = './test_model_{}'.format(request.node.name)
         model.save(model_fname)
         del model, env
         # loading
@@ -101,11 +101,13 @@ def test_custom_policy(model_name):
 
 
 @pytest.mark.parametrize("model_name", MODEL_DICT.keys())
-def test_custom_policy_kwargs(model_name):
+def test_custom_policy_kwargs(request, model_name):
     """
     Test if the algorithm (with a custom policy) can be loaded and saved without any issues.
     :param model_name: (str) A RL model
     """
+
+    model_fname = './test_model_{}'.format(request.node.name)
 
     try:
         model_class, policy, policy_kwargs = MODEL_DICT[model_name]
@@ -119,7 +121,6 @@ def test_custom_policy_kwargs(model_name):
         model = model_class(policy, env, policy_kwargs=policy_kwargs)
         model.learn(total_timesteps=100, seed=0)
 
-        model_fname = './test_model_{}'.format(model_name)
         model.save(model_fname)
         del model
 
