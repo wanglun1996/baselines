@@ -136,9 +136,9 @@ class PPO2(ActorCriticRLModel):
                     neglogpac = train_model.proba_distribution.neglogp(self.action_ph)
                     self.entropy = tf.reduce_mean(train_model.proba_distribution.entropy())
 
-                    vpred = train_model._value
+                    vpred = train_model.value_flat
                     vpredclipped = self.old_vpred_ph + tf.clip_by_value(
-                        train_model._value - self.old_vpred_ph, - self.clip_range_ph, self.clip_range_ph)
+                        train_model.value_flat - self.old_vpred_ph, - self.clip_range_ph, self.clip_range_ph)
                     vf_losses1 = tf.square(vpred - self.rewards_ph)
                     vf_losses2 = tf.square(vpredclipped - self.rewards_ph)
                     self.vf_loss = .5 * tf.reduce_mean(tf.maximum(vf_losses1, vf_losses2))

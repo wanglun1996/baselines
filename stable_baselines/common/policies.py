@@ -113,17 +113,21 @@ class BasePolicy(ABC):
         self.n_steps = n_steps
         with tf.variable_scope("input", reuse=False):
             if obs_phs is None:
-                self.obs_ph, self.processed_obs = observation_input(ob_space, n_batch, scale=scale)
+                self._obs_ph, self._processed_obs = observation_input(ob_space, n_batch, scale=scale)
             else:
-                self.obs_ph, self.processed_obs = obs_phs
+                self._obs_ph, self._processed_obs = obs_phs
 
-            self.action_ph = None
+            self._action_ph = None
             if add_action_ph:
-                self.action_ph = tf.placeholder(dtype=ac_space.dtype, shape=(None,) + ac_space.shape, name="action_ph")
+                self._action_ph = tf.placeholder(dtype=ac_space.dtype, shape=(n_batch,) + ac_space.shape, name="action_ph")
         self.sess = sess
         self.reuse = reuse
         self.ob_space = ob_space
         self.ac_space = ac_space
+
+    @property
+    def is_discrete(self):
+        return isinstance(self.ac_space, Discrete)
 
     @property
     def initial_state(self):
@@ -134,6 +138,24 @@ class BasePolicy(ABC):
         """
         assert not self.stateful
         return None
+
+    @property
+    def obs_ph(self):
+        """tf.Tensor: placeholder for observations, shape (self.n_batch, ) + self.ob_space.shape."""
+        return self._obs_ph
+
+    @property
+    def processed_obs(self):
+        """tf.Tensor: processed observations, shape (self.n_batch, ) + self.ob_space.shape.
+
+        The form of processing depends on the type of the observation space, and the parameters
+        whether scale is passed to the constructor; see observation_input for more information."""
+        return self._processed_obs
+
+    @property
+    def action_ph(self):
+        """tf.Tensor: placeholder for actions, shape (self.n_batch, ) + self.ac_space.shape."""
+        return self._action_ph
 
     @staticmethod
     def _kwargs_check(feature_extraction, kwargs):
@@ -193,12 +215,12 @@ class ActorCriticPolicy(BasePolicy):
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, scale=False):
         super(ActorCriticPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=reuse,
                                                 scale=scale)
-        self.pdtype = make_proba_dist_type(ac_space)
-        self.is_discrete = isinstance(ac_space, Discrete)
-        self.policy = None
-        self.proba_distribution = None
-        self.value_fn = None
-        self.deterministic_action = None
+        self._pdtype = make_proba_dist_type(ac_space)
+        self._policy = None
+        self._proba_distribution = None
+        self._value_fn = None
+        self._action = None
+        self._deterministic_action = None
 
     def _setup_init(self):
         """
@@ -206,21 +228,66 @@ class ActorCriticPolicy(BasePolicy):
         """
         with tf.variable_scope("output", reuse=True):
             assert self.policy is not None and self.proba_distribution is not None and self.value_fn is not None
-            self.action = self.proba_distribution.sample()
-            self.deterministic_action = self.proba_distribution.mode()
-            self.neglogp = self.proba_distribution.neglogp(self.action)
+            self._action = self.proba_distribution.sample()
+            self._deterministic_action = self.proba_distribution.mode()
+            self._neglogp = self.proba_distribution.neglogp(self.action)
             if isinstance(self.proba_distribution, CategoricalProbabilityDistribution):
-                self.policy_proba = tf.nn.softmax(self.policy)
+                self._policy_proba = tf.nn.softmax(self.policy)
             elif isinstance(self.proba_distribution, DiagGaussianProbabilityDistribution):
-                self.policy_proba = [self.proba_distribution.mean, self.proba_distribution.std]
+                self._policy_proba = [self.proba_distribution.mean, self.proba_distribution.std]
             elif isinstance(self.proba_distribution, BernoulliProbabilityDistribution):
-                self.policy_proba = tf.nn.sigmoid(self.policy)
+                self._policy_proba = tf.nn.sigmoid(self.policy)
             elif isinstance(self.proba_distribution, MultiCategoricalProbabilityDistribution):
-                self.policy_proba = [tf.nn.softmax(categorical.flatparam())
+                self._policy_proba = [tf.nn.softmax(categorical.flatparam())
                                      for categorical in self.proba_distribution.categoricals]
             else:
-                self.policy_proba = []  # it will return nothing, as it is not implemented
-            self._value = self.value_fn[:, 0]
+                self._policy_proba = []  # it will return nothing, as it is not implemented
+            self._value_tensor = self.value_fn[:, 0]
+
+    @property
+    def pdtype(self):
+        """ProbabilityDistributionType: type of the distribution for stochastic actions."""
+        return self._pdtype
+
+    @property
+    def policy(self):
+        """tf.Tensor: policy output, e.g. logits."""
+        return self._policy
+
+    @property
+    def proba_distribution(self):
+        """ProbabilityDistribution: distribution of stochastic actions."""
+        return self._proba_distribution
+
+    @property
+    def value_fn(self):
+        """tf.Tensor: value estimate, of shape (self.n_batch, 1)"""
+        return self._value_fn
+
+    @property
+    def value_flat(self):
+        """tf.Tensor: value estimate, of shape (self.n_batch, )"""
+        return self._value_tensor
+
+    @property
+    def action(self):
+        """tf.Tensor: stochastic action, of shape (self.n_batch, ) + self.ac_space.shape."""
+        return self._action
+
+    @property
+    def deterministic_action(self):
+        """tf.Tensor: deterministic action, of shape (self.n_batch, ) + self.ac_space.shape."""
+        return self._deterministic_action
+
+    @property
+    def neglogp(self):
+        """tf.Tensor: negative log probability of the action sampled by self.action."""
+        return self._neglogp
+
+    @property
+    def policy_proba(self):
+        """tf.Tensor: parameters of the probability distribution. Depends on pdtype."""
+        return self._policy_proba
 
     def step(self, obs, state=None, mask=None, deterministic=False):
         """
@@ -261,9 +328,6 @@ class StatefulActorCriticPolicy(ActorCriticPolicy):
     """
     Actor critic policy object that is stateful.
 
-    In addition to the usual placeholders, defines self.states_ph of shape (self.n_env, state_size)
-    and self.masks_ph of shape (self.n_batch).
-
     :param sess: (TensorFlow session) The current TensorFlow session
     :param ob_space: (Gym Space) The observation space of the environment
     :param ac_space: (Gym Space) The action space of the environment
@@ -283,14 +347,24 @@ class StatefulActorCriticPolicy(ActorCriticPolicy):
                                                         n_batch, reuse=reuse, scale=scale)
 
         with tf.variable_scope("input", reuse=False):
-            self.masks_ph = tf.placeholder(tf.float32, [n_batch], name="masks_ph")  # (done t-1)
-            self.states_ph = tf.placeholder(tf.float32, [self.n_env, state_size], name="states_ph")
+            self._masks_ph = tf.placeholder(tf.float32, [n_batch], name="masks_ph")  # (done t-1)
+            self._states_ph = tf.placeholder(tf.float32, [self.n_env, state_size], name="states_ph")
 
         self._initial_state = np.zeros((self.n_env, state_size), dtype=np.float32)
 
     @property
     def initial_state(self):
         return self._initial_state
+
+    @property
+    def masks_ph(self):
+        """tf.Tensor: placeholder for whether episode has terminated (done), shape (self.n_batch, )."""
+        return self._masks_ph
+
+    @property
+    def states_ph(self):
+        """tf.Tensor: placeholder for states, shape (self.n_env, state_size)."""
+        return self._states_ph
 
 
 class LstmPolicy(StatefulActorCriticPolicy):
@@ -348,10 +422,10 @@ class LstmPolicy(StatefulActorCriticPolicy):
                 rnn_output = seq_to_batch(rnn_output)
                 value_fn = linear(rnn_output, 'vf', 1)
 
-                self.proba_distribution, self.policy, self.q_value = \
+                self._proba_distribution, self._policy, self.q_value = \
                     self.pdtype.proba_distribution_from_latent(rnn_output, rnn_output)
 
-            self.value_fn = value_fn
+            self._value_fn = value_fn
         else:  # Use the new net_arch parameter
             if layers is not None:
                 warnings.warn("The new net_arch parameter overrides the deprecated layers parameter.")
@@ -413,25 +487,25 @@ class LstmPolicy(StatefulActorCriticPolicy):
                 if not lstm_layer_constructed:
                     raise ValueError("The net_arch parameter must contain at least one occurrence of 'lstm'!")
 
-                self.value_fn = linear(latent_value, 'vf', 1)
+                self._value_fn = linear(latent_value, 'vf', 1)
                 # TODO: why not init_scale = 0.001 here like in the feedforward
-                self.proba_distribution, self.policy, self.q_value = \
+                self._proba_distribution, self._policy, self.q_value = \
                     self.pdtype.proba_distribution_from_latent(latent_policy, latent_value)
         self._setup_init()
 
     def step(self, obs, state=None, mask=None, deterministic=False):
         if deterministic:
-            return self.sess.run([self.deterministic_action, self._value, self.snew, self.neglogp],
+            return self.sess.run([self.deterministic_action, self.value_flat, self.snew, self.neglogp],
                                  {self.obs_ph: obs, self.states_ph: state, self.masks_ph: mask})
         else:
-            return self.sess.run([self.action, self._value, self.snew, self.neglogp],
+            return self.sess.run([self.action, self.value_flat, self.snew, self.neglogp],
                                  {self.obs_ph: obs, self.states_ph: state, self.masks_ph: mask})
 
     def proba_step(self, obs, state=None, mask=None):
         return self.sess.run(self.policy_proba, {self.obs_ph: obs, self.states_ph: state, self.masks_ph: mask})
 
     def value(self, obs, state=None, mask=None):
-        return self.sess.run(self._value, {self.obs_ph: obs, self.states_ph: state, self.masks_ph: mask})
+        return self.sess.run(self.value_flat, {self.obs_ph: obs, self.states_ph: state, self.masks_ph: mask})
 
 
 class FeedForwardPolicy(ActorCriticPolicy):
@@ -480,19 +554,19 @@ class FeedForwardPolicy(ActorCriticPolicy):
             else:
                 pi_latent, vf_latent = mlp_extractor(tf.layers.flatten(self.processed_obs), net_arch, act_fun)
 
-            self.value_fn = linear(vf_latent, 'vf', 1)
+            self._value_fn = linear(vf_latent, 'vf', 1)
 
-            self.proba_distribution, self.policy, self.q_value = \
+            self._proba_distribution, self._policy, self.q_value = \
                 self.pdtype.proba_distribution_from_latent(pi_latent, vf_latent, init_scale=0.01)
 
         self._setup_init()
 
     def step(self, obs, state=None, mask=None, deterministic=False):
         if deterministic:
-            action, value, neglogp = self.sess.run([self.deterministic_action, self._value, self.neglogp],
+            action, value, neglogp = self.sess.run([self.deterministic_action, self.value_flat, self.neglogp],
                                                    {self.obs_ph: obs})
         else:
-            action, value, neglogp = self.sess.run([self.action, self._value, self.neglogp],
+            action, value, neglogp = self.sess.run([self.action, self.value_flat, self.neglogp],
                                                    {self.obs_ph: obs})
         return action, value, self.initial_state, neglogp
 
@@ -500,7 +574,7 @@ class FeedForwardPolicy(ActorCriticPolicy):
         return self.sess.run(self.policy_proba, {self.obs_ph: obs})
 
     def value(self, obs, state=None, mask=None):
-        return self.sess.run(self._value, {self.obs_ph: obs})
+        return self.sess.run(self.value_flat, {self.obs_ph: obs})
 
 
 class CnnPolicy(FeedForwardPolicy):

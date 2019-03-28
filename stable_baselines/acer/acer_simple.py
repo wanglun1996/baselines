@@ -222,7 +222,7 @@ class ACER(ActorCriticRLModel):
                     # (var)_i = variable index by action at step i
                     # shape is [n_envs * (n_steps + 1)]
                     if continuous:
-                        value = train_model.value_fn[:, 0]
+                        value = train_model.value_flat
                     else:
                         value = tf.reduce_sum(train_model.policy_proba * train_model.q_value, axis=-1)
 
