@@ -122,7 +122,9 @@ setup(name='stable_baselines',
       extras_require={
         'tests': [
             'pytest==3.5.1',
-            'pytest-cov'
+            'pytest-cov',
+            'pytest-env',
+            'pytest-xdist',
         ],
         'docs': [
             'sphinx',
