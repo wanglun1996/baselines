@@ -89,14 +89,15 @@ def test_custom_policy(model_name):
                 model.action_probability(obs)
             obs, _, _, _ = env.step(action)
         # saving
-        model.save("./test_model")
+        model_fname = './test_model_{}'.format(model_name)
+        model.save(model_fname)
         del model, env
         # loading
-        _ = model_class.load("./test_model", policy=policy)
+        _ = model_class.load(model_fname, policy=policy)
 
     finally:
-        if os.path.exists("./test_model"):
-            os.remove("./test_model")
+        if os.path.exists(model_fname):
+            os.remove(model_fname)
 
 
 @pytest.mark.parametrize("model_name", MODEL_DICT.keys())
@@ -118,7 +119,8 @@ def test_custom_policy_kwargs(model_name):
         model = model_class(policy, env, policy_kwargs=policy_kwargs)
         model.learn(total_timesteps=100, seed=0)
 
-        model.save("./test_model")
+        model_fname = './test_model_{}'.format(model_name)
+        model.save(model_fname)
         del model
 
         # loading
@@ -126,19 +128,19 @@ def test_custom_policy_kwargs(model_name):
         env = DummyVecEnv([lambda: gym.make(env)])
 
         # Load with specifying policy_kwargs
-        model = model_class.load("./test_model", policy=policy, env=env, policy_kwargs=policy_kwargs)
+        model = model_class.load(model_fname, policy=policy, env=env, policy_kwargs=policy_kwargs)
         model.learn(total_timesteps=100, seed=0)
         del model
 
         # Load without specifying policy_kwargs
-        model = model_class.load("./test_model", policy=policy, env=env)
+        model = model_class.load(model_fname, policy=policy, env=env)
         model.learn(total_timesteps=100, seed=0)
         del model
 
         # Load with different wrong policy_kwargs
         with pytest.raises(ValueError):
-            _ = model_class.load("./test_model", policy=policy, env=env, policy_kwargs=dict(wrong="kwargs"))
+            _ = model_class.load(model_fname, policy=policy, env=env, policy_kwargs=dict(wrong="kwargs"))
 
     finally:
-        if os.path.exists("./test_model"):
-            os.remove("./test_model")
+        if os.path.exists(model_fname):
+            os.remove(model_fname)
