@@ -127,6 +127,12 @@ class BasePolicy(ABC):
 
     @property
     def initial_state(self):
+        """
+        The initial state of the policy.
+
+        :return For stateless policies, None. For a stateful policy, a NumPy array of shape (self.n_env, state_size).
+        """
+        assert not self.stateful
         return None
 
     @staticmethod
@@ -251,7 +257,43 @@ class ActorCriticPolicy(BasePolicy):
         raise NotImplementedError
 
 
-class LstmPolicy(ActorCriticPolicy):
+class StatefulActorCriticPolicy(ActorCriticPolicy):
+    """
+    Actor critic policy object that is stateful.
+
+    In addition to the usual placeholders, defines self.states_ph of shape (self.n_env, state_size)
+    and self.masks_ph of shape (self.n_batch).
+
+    :param sess: (TensorFlow session) The current TensorFlow session
+    :param ob_space: (Gym Space) The observation space of the environment
+    :param ac_space: (Gym Space) The action space of the environment
+    :param n_env: (int) The number of environments to run
+    :param n_steps: (int) The number of steps to run for each environment
+    :param n_batch: (int) The number of batch to run (n_envs * n_steps)
+    :param state_size: (int) The size of the per-environment state space.
+    :param reuse: (bool) If the policy is reusable or not
+    :param scale: (bool) whether or not to scale the input
+    """
+
+    stateful = True
+
+    def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch,
+                 state_size, reuse=False, scale=False):
+        super(StatefulActorCriticPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps,
+                                                        n_batch, reuse=reuse, scale=scale)
+
+        with tf.variable_scope("input", reuse=False):
+            self.masks_ph = tf.placeholder(tf.float32, [n_batch], name="masks_ph")  # (done t-1)
+            self.states_ph = tf.placeholder(tf.float32, [self.n_env, state_size], name="states_ph")
+
+        self._initial_state = np.zeros((self.n_env, state_size), dtype=np.float32)
+
+    @property
+    def initial_state(self):
+        return self._initial_state
+
+
+class LstmPolicy(StatefulActorCriticPolicy):
     """
     Policy object that implements actor critic, using LSTMs.
 
@@ -278,15 +320,12 @@ class LstmPolicy(ActorCriticPolicy):
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm=256, reuse=False, layers=None,
                  net_arch=None, act_fun=tf.tanh, cnn_extractor=nature_cnn, layer_norm=False, feature_extraction="cnn",
                  **kwargs):
-        super(LstmPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse,
+        # state_size = n_lstm * 2 dim because of the cell and hidden states of the LSTM
+        super(LstmPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch,
+                                         state_size=2 * n_lstm, reuse=reuse,
                                          scale=(feature_extraction == "cnn"))
 
         self._kwargs_check(feature_extraction, kwargs)
-
-        with tf.variable_scope("input", reuse=True):
-            self.masks_ph = tf.placeholder(tf.float32, [n_batch], name="masks_ph")  # mask (done t-1)
-            # n_lstm * 2 dim because of the cell and hidden states of the LSTM
-            self.states_ph = tf.placeholder(tf.float32, [self.n_env, n_lstm * 2], name="states_ph")  # states
 
         if net_arch is None:  # Legacy mode
             if layers is None:
@@ -378,12 +417,7 @@ class LstmPolicy(ActorCriticPolicy):
                 # TODO: why not init_scale = 0.001 here like in the feedforward
                 self.proba_distribution, self.policy, self.q_value = \
                     self.pdtype.proba_distribution_from_latent(latent_policy, latent_value)
-        self._initial_state = np.zeros((self.n_env, self.n_lstm * 2), dtype=np.float32)
         self._setup_init()
-
-    @property
-    def initial_state(self):
-        return self._initial_state
 
     def step(self, obs, state=None, mask=None, deterministic=False):
         if deterministic:

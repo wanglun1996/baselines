@@ -10,7 +10,7 @@ from stable_baselines.a2c.utils import batch_to_seq, seq_to_batch, Scheduler, fi
 from stable_baselines.acer.buffer import Buffer
 from stable_baselines.common import ActorCriticRLModel, tf_util, SetVerbosity, TensorboardWriter
 from stable_baselines.common.runners import AbstractEnvRunner
-from stable_baselines.common.policies import LstmPolicy, ActorCriticPolicy
+from stable_baselines.common.policies import ActorCriticPolicy, StatefulActorCriticPolicy
 
 
 def strip(var, n_envs, n_steps, flat=False):
@@ -180,7 +180,7 @@ class ACER(ActorCriticRLModel):
                 self.sess = tf_util.make_session(num_cpu=self.num_procs, graph=self.graph)
 
                 n_batch_step = None
-                if self.policy.stateful:
+                if issubclass(self.policy, StatefulActorCriticPolicy):
                     n_batch_step = self.n_envs
                 n_batch_train = self.n_envs * (self.n_steps + 1)
 

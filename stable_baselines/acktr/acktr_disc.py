@@ -14,7 +14,7 @@ from stable_baselines.a2c.a2c import A2CRunner
 from stable_baselines.a2c.utils import Scheduler, find_trainable_variables, calc_entropy, mse, \
     total_episode_reward_logger
 from stable_baselines.acktr import kfac
-from stable_baselines.common.policies import LstmPolicy, ActorCriticPolicy
+from stable_baselines.common.policies import ActorCriticPolicy, StatefulActorCriticPolicy
 
 
 class ACKTR(ActorCriticRLModel):
@@ -115,7 +115,7 @@ class ACKTR(ActorCriticRLModel):
 
                 n_batch_step = None
                 n_batch_train = None
-                if self.policy.stateful:
+                if issubclass(self.policy, StatefulActorCriticPolicy):
                     n_batch_step = self.n_envs
                     n_batch_train = self.n_envs * self.n_steps
 

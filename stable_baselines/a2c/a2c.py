@@ -6,7 +6,7 @@ import tensorflow as tf
 
 from stable_baselines import logger
 from stable_baselines.common import explained_variance, tf_util, ActorCriticRLModel, SetVerbosity, TensorboardWriter
-from stable_baselines.common.policies import LstmPolicy, ActorCriticPolicy
+from stable_baselines.common.policies import ActorCriticPolicy, StatefulActorCriticPolicy
 from stable_baselines.common.runners import AbstractEnvRunner
 from stable_baselines.a2c.utils import discount_with_dones, Scheduler, find_trainable_variables, mse, \
     total_episode_reward_logger
@@ -98,7 +98,7 @@ class A2C(ActorCriticRLModel):
 
                 n_batch_step = None
                 n_batch_train = None
-                if self.policy.stateful:
+                if issubclass(self.policy, StatefulActorCriticPolicy):
                     n_batch_step = self.n_envs
                     n_batch_train = self.n_envs * self.n_steps
 

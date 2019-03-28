@@ -10,7 +10,7 @@ import tensorflow as tf
 from stable_baselines import logger
 from stable_baselines.common import explained_variance, ActorCriticRLModel, tf_util, SetVerbosity, TensorboardWriter
 from stable_baselines.common.runners import AbstractEnvRunner
-from stable_baselines.common.policies import LstmPolicy, ActorCriticPolicy
+from stable_baselines.common.policies import ActorCriticPolicy, StatefulActorCriticPolicy
 from stable_baselines.a2c.utils import total_episode_reward_logger
 
 
@@ -110,7 +110,7 @@ class PPO2(ActorCriticRLModel):
 
                 n_batch_step = None
                 n_batch_train = None
-                if self.policy.stateful:
+                if issubclass(self.policy, StatefulActorCriticPolicy):
                     assert self.n_envs % self.nminibatches == 0, "For recurrent policies, "\
                         "the number of environments run in parallel should be a multiple of nminibatches."
                     n_batch_step = self.n_envs
