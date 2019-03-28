@@ -135,7 +135,8 @@ class BasePolicy(ABC):
         """
         The initial state of the policy.
 
-        :return For stateless policies, None. For a stateful policy, a NumPy array of shape (self.n_env, state_size).
+        :return For stateless policies, None. For a stateful policy, a NumPy array of
+        shape (self.n_env, ) + state_shape.
         """
         assert not self.stateful
         return None
@@ -328,7 +329,7 @@ class StatefulActorCriticPolicy(ActorCriticPolicy):
     :param n_env: (int) The number of environments to run
     :param n_steps: (int) The number of steps to run for each environment
     :param n_batch: (int) The number of batch to run (n_envs * n_steps)
-    :param state_size: (int) The size of the per-environment state space.
+    :param state_shape: (tuple<int>) shape of the per-environment state space.
     :param reuse: (bool) If the policy is reusable or not
     :param scale: (bool) whether or not to scale the input
     """
@@ -336,15 +337,15 @@ class StatefulActorCriticPolicy(ActorCriticPolicy):
     stateful = True
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch,
-                 state_size, reuse=False, scale=False):
+                 state_shape, reuse=False, scale=False):
         super(StatefulActorCriticPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps,
                                                         n_batch, reuse=reuse, scale=scale)
 
         with tf.variable_scope("input", reuse=False):
             self._dones_ph = tf.placeholder(tf.float32, [n_batch], name="dones_ph")  # (done t-1)
-            self._states_ph = tf.placeholder(tf.float32, [self.n_env, state_size], name="states_ph")
+            self._states_ph = tf.placeholder(tf.float32, [self.n_env] + state_shape, name="states_ph")
 
-        self._initial_state = np.zeros((self.n_env, state_size), dtype=np.float32)
+        self._initial_state = np.zeros((self.n_env, ) + state_shape, dtype=np.float32)
 
     @property
     def initial_state(self):
@@ -358,7 +359,7 @@ class StatefulActorCriticPolicy(ActorCriticPolicy):
 
     @property
     def states_ph(self):
-        """tf.Tensor: placeholder for states, shape (self.n_env, state_size)."""
+        """tf.Tensor: placeholder for states, shape (self.n_env, ) + state_shape."""
         return self._states_ph
 
 
@@ -389,9 +390,9 @@ class LstmPolicy(StatefulActorCriticPolicy):
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm=256, reuse=False, layers=None,
                  net_arch=None, act_fun=tf.tanh, cnn_extractor=nature_cnn, layer_norm=False, feature_extraction="cnn",
                  **kwargs):
-        # state_size = n_lstm * 2 dim because of the cell and hidden states of the LSTM
+        # state_shape = [n_lstm * 2] dim because of the cell and hidden states of the LSTM
         super(LstmPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps, n_batch,
-                                         state_size=2 * n_lstm, reuse=reuse,
+                                         state_shape=[2 * n_lstm], reuse=reuse,
                                          scale=(feature_extraction == "cnn"))
 
         self._kwargs_check(feature_extraction, kwargs)
