@@ -246,7 +246,7 @@ class PPO1(ActorCriticRLModel):
                     # standardized advantage function estimate
                     atarg = (atarg - atarg.mean()) / atarg.std()
                     dataset = Dataset(dict(ob=obs_ph, ac=action_ph, atarg=atarg, vtarg=tdlamret),
-                                      shuffle=not issubclass(self.policy, LstmPolicy))
+                                      shuffle=not self.policy.stateful)
                     optim_batchsize = self.optim_batchsize or obs_ph.shape[0]
 
                     # set old parameter values to new parameter values

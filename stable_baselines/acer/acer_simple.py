@@ -180,7 +180,7 @@ class ACER(ActorCriticRLModel):
                 self.sess = tf_util.make_session(num_cpu=self.num_procs, graph=self.graph)
 
                 n_batch_step = None
-                if issubclass(self.policy, LstmPolicy):
+                if self.policy.stateful:
                     n_batch_step = self.n_envs
                 n_batch_train = self.n_envs * (self.n_steps + 1)
 

@@ -98,7 +98,7 @@ class A2C(ActorCriticRLModel):
 
                 n_batch_step = None
                 n_batch_train = None
-                if issubclass(self.policy, LstmPolicy):
+                if self.policy.stateful:
                     n_batch_step = self.n_envs
                     n_batch_train = self.n_envs * self.n_steps
 
