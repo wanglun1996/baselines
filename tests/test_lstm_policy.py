@@ -39,8 +39,8 @@ class CustomLSTMPolicy4(LstmPolicy):
 
 
 def _pos_obs(full_obs):
-    x, x_dot, theta, theta_dot = full_obs
-    return x, theta
+    xpos, _xvel, thetapos, _thetavel = full_obs
+    return xpos, thetapos
 
 
 class CartPoleNoVelEnv(CartPoleEnv):
@@ -51,7 +51,6 @@ class CartPoleNoVelEnv(CartPoleEnv):
         idxs = [0, 2]
         low = self.observation_space.low[idxs]
         high = self.observation_space.high[idxs]
-        print(low)
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
 
     def reset(self):
@@ -116,9 +115,9 @@ def test_lstm_train():
                  noptepochs=10, ent_coef=0.0, learning_rate=3e-4, cliprange=0.2, verbose=1)
 
     eprewmeans = []
-    def reward_callback(locals, globals):
+    def reward_callback(local, _):
         nonlocal eprewmeans
-        eprewmeans.append(safe_mean([ep_info['r'] for ep_info in locals['ep_info_buf']]))
+        eprewmeans.append(safe_mean([ep_info['r'] for ep_info in local['ep_info_buf']]))
 
     model.learn(total_timesteps=100000, seed=0, callback=reward_callback)
 
