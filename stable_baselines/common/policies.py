@@ -133,10 +133,8 @@ class BasePolicy(ABC):
     @property
     def initial_state(self):
         """
-        The initial state of the policy.
-
-        :return For stateless policies, None. For a stateful policy, a NumPy array of
-        shape (self.n_env, ) + state_shape.
+        The initial state of the policy. For stateless policies, None. For a stateful policy,
+        a NumPy array of shape (self.n_env, ) + state_shape.
         """
         assert not self.stateful
         return None
