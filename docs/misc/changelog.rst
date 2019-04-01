@@ -8,6 +8,8 @@ For download links, please look at `Github release page <https://github.com/hill
 Pre-Release 2.5.1a0 (WIP)
 --------------------------
 
+- doc update (fix example of result plotter + improve doc)
+- fixed logger issues when stdout lacks ``read`` function
 - clarified the public interface of ``BasePolicy`` and ``ActorCriticPolicy``. Breaking change: `masks_ph` is now called `dones_ph`.
 - support for custom stateful policies.
 
