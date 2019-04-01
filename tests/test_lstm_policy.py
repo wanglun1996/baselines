@@ -38,11 +38,6 @@ class CustomLSTMPolicy4(LstmPolicy):
                          layer_norm=True, feature_extraction="mlp", **_kwargs)
 
 
-def _pos_obs(full_obs):
-    xpos, _xvel, thetapos, _thetavel = full_obs
-    return xpos, thetapos
-
-
 class CartPoleNoVelEnv(CartPoleEnv):
     """Variant of CartPoleEnv with velocity information removed. This task requires memory to solve."""
 
@@ -53,17 +48,23 @@ class CartPoleNoVelEnv(CartPoleEnv):
         high = self.observation_space.high[idxs]
         self.observation_space = spaces.Box(low, high, dtype=np.float32)
 
+    @staticmethod
+    def _pos_obs(full_obs):
+        xpos, _xvel, thetapos, _thetavel = full_obs
+        return xpos, thetapos
+
     def reset(self):
         full_obs = super().reset()
-        return _pos_obs(full_obs)
+        return CartPoleNoVelEnv._pos_obs(full_obs)
 
     def step(self, action):
         full_obs, rew, done, info = super().step(action)
-        return _pos_obs(full_obs), rew, done, info
+        return CartPoleNoVelEnv._pos_obs(full_obs), rew, done, info
 
 
 N_TRIALS = 100
 NUM_ENVS = 16
+NUM_EPISODES_FOR_SCORE = 10
 
 MODELS = [A2C, ACER, ACKTR, PPO2]
 LSTM_POLICIES = [MlpLstmPolicy, CustomLSTMPolicy1, CustomLSTMPolicy2, CustomLSTMPolicy3, CustomLSTMPolicy4]
@@ -127,5 +128,5 @@ def test_lstm_train():
     # LSTM policies can reach above 400, but it varies a lot between runs; consistently get >=150.
     # See PR #244 for more detailed benchmarks.
 
-    average_reward = sum(eprewmeans[-4:]) / 4
-    assert average_reward >= 150, "Mean reward below 200; per-episode rewards {}".format(average_reward)
+    average_reward = sum(eprewmeans[-NUM_EPISODES_FOR_SCORE:]) / NUM_EPISODES_FOR_SCORE
+    assert average_reward >= 150, "Mean reward below 150; per-episode rewards {}".format(average_reward)
