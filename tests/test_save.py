@@ -38,7 +38,7 @@ def test_model_manipulation(request, model_class, storage_method):
     :param model_class: (BaseRLModel) A RL model
     """
 
-    model_fname = './test_model_{}'.format(request.node.name)
+    model_fname = './test_model_{}.pkl'.format(request.node.name)
 
     try:
         env = DummyVecEnv([lambda: IdentityEnv(10)])

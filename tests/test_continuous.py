@@ -62,7 +62,7 @@ def test_model_manipulation(request, model_class):
         acc_reward = sum(acc_reward) / N_TRIALS
 
         # saving
-        model_fname = './test_model_{}'.format(request.node.name)
+        model_fname = './test_model_{}.pkl'.format(request.node.name)
         model.save(model_fname)
 
         del model, env
@@ -180,9 +180,9 @@ def test_ddpg_normalization():
     model.learn(1000)
     obs_rms_params = model.sess.run(model.obs_rms_params)
     ret_rms_params = model.sess.run(model.ret_rms_params)
-    model.save('./test_ddpg')
+    model.save('./test_ddpg.pkl')
 
-    loaded_model = DDPG.load("test_ddpg")
+    loaded_model = DDPG.load('./test_ddpg.pkl')
     obs_rms_params_2 = loaded_model.sess.run(loaded_model.obs_rms_params)
     ret_rms_params_2 = loaded_model.sess.run(loaded_model.ret_rms_params)
 
@@ -192,5 +192,5 @@ def test_ddpg_normalization():
 
     del model, loaded_model
 
-    if os.path.exists("./test_ddpg"):
-        os.remove("./test_ddpg")
+    if os.path.exists("./test_ddpg.pkl"):
+        os.remove("./test_ddpg.pkl")
