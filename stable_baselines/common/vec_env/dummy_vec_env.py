@@ -11,7 +11,7 @@ class DummyVecEnv(VecEnv):
 
     :param env_fns: ([Gym Environment]) the list of environments to vectorize
     """
-    
+
     def __init__(self, env_fns):
         self.envs = [fn() for fn in env_fns]
         env = self.envs[0]
@@ -68,16 +68,22 @@ class DummyVecEnv(VecEnv):
     def _obs_from_buf(self):
         return dict_to_obs(self.observation_space, copy_obs_dict(self.buf_obs))
 
-    def env_method(self, method_name, *method_args, **method_kwargs):
+    def env_method(self, method_name, indices=None, *method_args, **method_kwargs):
         """
         Provides an interface to call arbitrary class methods of vectorized environments
 
         :param method_name: (str) The name of the env class method to invoke
+        :param indices: (list,int) Indices of envs whose method to call
         :param method_args: (tuple) Any positional arguments to provide in the call
         :param method_kwargs: (dict) Any keyword arguments to provide in the call
         :return: (list) List of items retured by the environment's method call
         """
-        return [getattr(env_i, method_name)(*method_args, **method_kwargs) for env_i in self.envs]
+        if indices is None:
+            indices = range(len(self.envs))
+        elif isinstance(indices, int):
+            indices = [indices]
+        envs = [self.envs[i] for i in indices]
+        return [getattr(env_i, method_name)(*method_args, **method_kwargs) for env_i in envs]
 
     def get_attr(self, attr_name):
         """

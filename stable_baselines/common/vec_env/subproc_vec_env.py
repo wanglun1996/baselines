@@ -134,17 +134,21 @@ class SubprocVecEnv(VecEnv):
         imgs = [pipe.recv() for pipe in self.remotes]
         return imgs
 
-    def env_method(self, method_name, *method_args, **method_kwargs):
+    def env_method(self, method_name, indices=None, *method_args, **method_kwargs):
         """
         Provides an interface to call arbitrary class methods of vectorized environments
 
         :param method_name: (str) The name of the env class method to invoke
+        :param indices: (list,tuple) Iterable containing indices of envs whose method to call
         :param method_args: (tuple) Any positional arguments to provide in the call
         :param method_kwargs: (dict) Any keyword arguments to provide in the call
         :return: (list) List of items retured by each environment's method call
         """
-
-        for remote in self.remotes:
+        if indices is None:
+            indices = range(len(self.remotes))
+        elif isinstance(indices, int):
+            indices = [indices]
+        for remote in [self.remotes[i] for i in indices]:
             remote.send(('env_method', (method_name, method_args, method_kwargs)))
         return [remote.recv() for remote in self.remotes]
 
