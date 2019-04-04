@@ -100,7 +100,7 @@ def test_lstm_policy(model_class, policy):
 
 @pytest.mark.expensive
 def test_lstm_train():
-    """Test that LSTM models are able to achieve >=450 (out of 500) reward on CartPoleNoVelEnv.
+    """Test that LSTM models are able to achieve >=150 (out of 500) reward on CartPoleNoVelEnv.
 
     This environment requires memory to perform well in."""
     def make_env(i):
