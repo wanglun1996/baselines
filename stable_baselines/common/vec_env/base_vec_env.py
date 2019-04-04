@@ -124,6 +124,7 @@ class VecEnv(ABC):
         Step the environments with the given action
 
         :param actions: ([int] or [float]) the action
+
         :return: ([int] or [float], [float], [bool], dict) observation, reward, done, information
         """
         self.step_async(actions)
@@ -205,7 +206,7 @@ class VecEnvWrapper(VecEnv):
         return self.venv.set_attr(attr_name, value, indices)
 
     def env_method(self, method_name, indices=None, *method_args, **method_kwargs):
-        return self.venv.env_method(method_name, indices, method_args, method_kwargs)
+        return self.venv.env_method(method_name, indices, *method_args, **method_kwargs)
 
 
 class CloudpickleWrapper(object):
