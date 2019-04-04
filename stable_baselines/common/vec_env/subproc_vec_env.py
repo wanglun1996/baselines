@@ -46,14 +46,20 @@ class SubprocVecEnv(VecEnv):
     """
     Creates a multiprocess vectorized wrapper for multiple environments
 
+    .. warning::
+
+        Only 'forkserver' and 'spawn' start methods are thread-safe,
+        which is important when TensorFlow
+        sessions or other non thread-safe libraries are used in the parent (see issue #217).
+        However, compared to 'fork' they incur a small start-up cost and have restrictions on
+        global variables. With those methods,
+        users must wrap the code in an ``if __name__ == "__main__":``
+        For more information, see the multiprocessing documentation.
+
     :param env_fns: ([Gym Environment]) Environments to run in subprocesses
     :param start_method: (str) method used to start the subprocesses.
            Must be one of the methods returned by multiprocessing.get_all_start_methods().
-           Defaults to 'forkserver' on available platforms, and 'spawn' otherwise.
-           Both 'forkserver' and 'spawn' are thread-safe, which is important when TensorFlow
-           sessions or other non thread-safe libraries are used in the parent (see issue #217).
-           However, compared to 'fork' they incur a small start-up cost and have restrictions on
-           global variables. For more information, see the multiprocessing documentation.
+           Defaults to 'fork' on available platforms, and 'spawn' otherwise.
     """
 
     def __init__(self, env_fns, start_method=None):
@@ -62,10 +68,11 @@ class SubprocVecEnv(VecEnv):
         n_envs = len(env_fns)
 
         if start_method is None:
-            # Use thread safe method, see issue #217.
-            # forkserver faster than spawn but not always available.
-            forkserver_available = 'forkserver' in multiprocessing.get_all_start_methods()
-            start_method = 'forkserver' if forkserver_available else 'spawn'
+            # Fork is not a thread safe method (see issue #217)
+            # but is more user friendly (does not require to wrap the code in
+            # a `if __name__ == "__main__":`)
+            fork_available = 'fork' in multiprocessing.get_all_start_methods()
+            start_method = 'fork' if fork_available else 'spawn'
         ctx = multiprocessing.get_context(start_method)
 
         self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)])
@@ -139,31 +146,29 @@ class SubprocVecEnv(VecEnv):
         Provides an interface to call arbitrary class methods of vectorized environments
 
         :param method_name: (str) The name of the env class method to invoke
-        :param indices: (list,tuple) Iterable containing indices of envs whose method to call
+        :param indices: (list,int) Indices of envs whose method to call
         :param method_args: (tuple) Any positional arguments to provide in the call
         :param method_kwargs: (dict) Any keyword arguments to provide in the call
         :return: (list) List of items retured by each environment's method call
         """
-        if indices is None:
-            indices = range(len(self.remotes))
-        elif isinstance(indices, int):
-            indices = [indices]
-        for remote in [self.remotes[i] for i in indices]:
+        target_remotes = self._get_target_remotes(indices)
+        for remote in target_remotes:
             remote.send(('env_method', (method_name, method_args, method_kwargs)))
-        return [remote.recv() for remote in self.remotes]
+        return [remote.recv() for remote in target_remotes]
 
-    def get_attr(self, attr_name):
+    def get_attr(self, attr_name, indices=None):
         """
         Provides a mechanism for getting class attribues from vectorized environments
         (note: attribute value returned must be picklable)
 
         :param attr_name: (str) The name of the attribute whose value to return
+        :param indices: (list,int) Indices of envs to get attribute from
         :return: (list) List of values of 'attr_name' in all environments
         """
-
-        for remote in self.remotes:
+        target_remotes = self._get_target_remotes(indices)
+        for remote in target_remotes:
             remote.send(('get_attr', attr_name))
-        return [remote.recv() for remote in self.remotes]
+        return [remote.recv() for remote in target_remotes]
 
     def set_attr(self, attr_name, value, indices=None):
         """
@@ -173,17 +178,18 @@ class SubprocVecEnv(VecEnv):
 
         :param attr_name: (str) Name of attribute to assign new value
         :param value: (obj) Value to assign to 'attr_name'
-        :param indices: (list,tuple) Iterable containing indices of envs whose attr to set
+        :param indices: (list,int) Indices of envs to assign value
         :return: (list) in case env access methods might return something, they will be returned in a list
         """
-
-        if indices is None:
-            indices = range(len(self.remotes))
-        elif isinstance(indices, int):
-            indices = [indices]
-        for remote in [self.remotes[i] for i in indices]:
+        target_remotes = self._get_target_remotes(indices)
+        for remote in target_remotes:
             remote.send(('set_attr', (attr_name, value)))
-        return [remote.recv() for remote in [self.remotes[i] for i in indices]]
+        return [remote.recv() for remote in target_remotes]
+
+    def _get_target_remotes(self, indices):
+        indices = self._get_indices(indices)
+        target_remotes = [self.remotes[i] for i in indices]
+        return target_remotes
 
 
 def _flatten_obs(obs, space):

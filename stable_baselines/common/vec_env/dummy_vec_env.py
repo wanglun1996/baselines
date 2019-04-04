@@ -47,7 +47,8 @@ class DummyVecEnv(VecEnv):
         return self._obs_from_buf()
 
     def close(self):
-        return
+        for env in self.envs:
+            env.close()
 
     def get_images(self):
         return [env.render(mode='rgb_array') for env in self.envs]
@@ -76,23 +77,21 @@ class DummyVecEnv(VecEnv):
         :param indices: (list,int) Indices of envs whose method to call
         :param method_args: (tuple) Any positional arguments to provide in the call
         :param method_kwargs: (dict) Any keyword arguments to provide in the call
-        :return: (list) List of items retured by the environment's method call
+        :return: (list) List of items returned by the environment's method call
         """
-        if indices is None:
-            indices = range(len(self.envs))
-        elif isinstance(indices, int):
-            indices = [indices]
-        envs = [self.envs[i] for i in indices]
-        return [getattr(env_i, method_name)(*method_args, **method_kwargs) for env_i in envs]
+        target_envs = self._get_target_envs(indices)
+        return [getattr(env_i, method_name)(*method_args, **method_kwargs) for env_i in target_envs]
 
-    def get_attr(self, attr_name):
+    def get_attr(self, attr_name, indices=None):
         """
         Provides a mechanism for getting class attribues from vectorized environments
 
         :param attr_name: (str) The name of the attribute whose value to return
+        :param indices: (list,int) Indices of envs to get attribute from
         :return: (list) List of values of 'attr_name' in all environments
         """
-        return [getattr(env_i, attr_name) for env_i in self.envs]
+        target_envs = self._get_target_envs(indices)
+        return [getattr(env_i, attr_name) for env_i in target_envs]
 
     def set_attr(self, attr_name, value, indices=None):
         """
@@ -103,8 +102,10 @@ class DummyVecEnv(VecEnv):
         :param indices: (list,int) Indices of envs to assign value
         :return: (list) in case env access methods might return something, they will be returned in a list
         """
-        if indices is None:
-            indices = range(len(self.envs))
-        elif isinstance(indices, int):
-            indices = [indices]
-        return [setattr(env_i, attr_name, value) for env_i in [self.envs[i] for i in indices]]
+        target_envs = self._get_target_envs(indices)
+        return [setattr(env_i, attr_name, value) for env_i in target_envs]
+
+    def _get_target_envs(self, indices):
+        indices = self._get_indices(indices)
+        target_envs = [self.envs[i] for i in indices]
+        return target_envs

@@ -114,6 +114,19 @@ class VecEnv(ABC):
         else:
             return self
 
+    def _get_indices(self, indices):
+        """
+        Convert a flexibly-typed reference to environment indices to an implied list of indices.
+
+        :param indices: (None,int,Iterable) refers to indices of envs.
+        :return: (list) the implied list of indices.
+        """
+        if indices is None:
+            indices = range(len(self.envs))
+        elif isinstance(indices, int):
+            indices = [indices]
+        return indices
+
 
 class VecEnvWrapper(VecEnv):
     """
