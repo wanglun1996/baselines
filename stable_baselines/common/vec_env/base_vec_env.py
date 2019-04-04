@@ -122,7 +122,7 @@ class VecEnv(ABC):
         :return: (list) the implied list of indices.
         """
         if indices is None:
-            indices = range(len(self.envs))
+            indices = range(self.num_envs)
         elif isinstance(indices, int):
             indices = [indices]
         return indices
