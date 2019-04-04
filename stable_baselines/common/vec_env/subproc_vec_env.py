@@ -142,15 +142,6 @@ class SubprocVecEnv(VecEnv):
         return imgs
 
     def env_method(self, method_name, indices=None, *method_args, **method_kwargs):
-        """
-        Provides an interface to call arbitrary class methods of vectorized environments
-
-        :param method_name: (str) The name of the env class method to invoke
-        :param indices: (list,int) Indices of envs whose method to call
-        :param method_args: (tuple) Any positional arguments to provide in the call
-        :param method_kwargs: (dict) Any keyword arguments to provide in the call
-        :return: (list) List of items retured by each environment's method call
-        """
         target_remotes = self._get_target_remotes(indices)
         for remote in target_remotes:
             remote.send(('env_method', (method_name, method_args, method_kwargs)))
@@ -158,12 +149,8 @@ class SubprocVecEnv(VecEnv):
 
     def get_attr(self, attr_name, indices=None):
         """
-        Provides a mechanism for getting class attribues from vectorized environments
+        Provides a mechanism for getting class attributes from vectorized environments
         (note: attribute value returned must be picklable)
-
-        :param attr_name: (str) The name of the attribute whose value to return
-        :param indices: (list,int) Indices of envs to get attribute from
-        :return: (list) List of values of 'attr_name' in all environments
         """
         target_remotes = self._get_target_remotes(indices)
         for remote in target_remotes:
@@ -173,13 +160,7 @@ class SubprocVecEnv(VecEnv):
     def set_attr(self, attr_name, value, indices=None):
         """
         Provides a mechanism for setting arbitrary class attributes inside vectorized environments
-        (note:  this is a broadcast of a single value to all instances)
         (note:  the value must be picklable)
-
-        :param attr_name: (str) Name of attribute to assign new value
-        :param value: (obj) Value to assign to 'attr_name'
-        :param indices: (list,int) Indices of envs to assign value
-        :return: (list) in case env access methods might return something, they will be returned in a list
         """
         target_remotes = self._get_target_remotes(indices)
         for remote in target_remotes:

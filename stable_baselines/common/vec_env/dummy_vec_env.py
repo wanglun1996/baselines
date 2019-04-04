@@ -70,38 +70,14 @@ class DummyVecEnv(VecEnv):
         return dict_to_obs(self.observation_space, copy_obs_dict(self.buf_obs))
 
     def env_method(self, method_name, indices=None, *method_args, **method_kwargs):
-        """
-        Provides an interface to call arbitrary class methods of vectorized environments
-
-        :param method_name: (str) The name of the env class method to invoke
-        :param indices: (list,int) Indices of envs whose method to call
-        :param method_args: (tuple) Any positional arguments to provide in the call
-        :param method_kwargs: (dict) Any keyword arguments to provide in the call
-        :return: (list) List of items returned by the environment's method call
-        """
         target_envs = self._get_target_envs(indices)
         return [getattr(env_i, method_name)(*method_args, **method_kwargs) for env_i in target_envs]
 
     def get_attr(self, attr_name, indices=None):
-        """
-        Provides a mechanism for getting class attribues from vectorized environments
-
-        :param attr_name: (str) The name of the attribute whose value to return
-        :param indices: (list,int) Indices of envs to get attribute from
-        :return: (list) List of values of 'attr_name' in all environments
-        """
         target_envs = self._get_target_envs(indices)
         return [getattr(env_i, attr_name) for env_i in target_envs]
 
     def set_attr(self, attr_name, value, indices=None):
-        """
-        Provides a mechanism for setting arbitrary class attributes inside vectorized environments
-
-        :param attr_name: (str) Name of attribute to assign new value
-        :param value: (obj) Value to assign to 'attr_name'
-        :param indices: (list,int) Indices of envs to assign value
-        :return: (list) in case env access methods might return something, they will be returned in a list
-        """
         target_envs = self._get_target_envs(indices)
         return [setattr(env_i, attr_name, value) for env_i in target_envs]
 
