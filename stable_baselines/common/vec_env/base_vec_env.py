@@ -198,6 +198,15 @@ class VecEnvWrapper(VecEnv):
     def get_images(self):
         return self.venv.get_images()
 
+    def get_attr(self, attr_name, indices=None):
+        return self.venv.get_attr(attr_name, indices)
+
+    def set_attr(self, attr_name, value, indices=None):
+        return self.venv.set_attr(attr_name, value, indices)
+
+    def env_method(self, method_name, indices=None, *method_args, **method_kwargs):
+        return self.venv.env_method(method_name, indices, method_args, method_kwargs)
+
 
 class CloudpickleWrapper(object):
     def __init__(self, var):
