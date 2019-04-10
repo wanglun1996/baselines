@@ -59,7 +59,7 @@ def test_vecenv_custom_calls(vec_env_class):
     def make_env():
         return CustomGymEnv(gym.spaces.Discrete(2))
     vec_env = vec_env_class([make_env for _ in range(N_ENVS)])
-    env_method_results = vec_env.env_method('custom_method', None, 1, dim_1=2)
+    env_method_results = vec_env.env_method('custom_method', 1, indices=None, dim_1=2)
     setattr_results = []
     # Set current_step to an arbitrary value
     for env_idx in range(N_ENVS):

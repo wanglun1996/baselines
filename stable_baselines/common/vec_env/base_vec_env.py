@@ -107,7 +107,7 @@ class VecEnv(ABC):
         pass
 
     @abstractmethod
-    def env_method(self, method_name, indices=None, *method_args, **method_kwargs):
+    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
         """
         Provides an interface to call arbitrary class methods of vectorized environments
 
