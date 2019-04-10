@@ -38,10 +38,9 @@ class GAIL(ActorCriticRLModel):
                  hidden_size_adversary=100, adversary_entcoeff=1e-3,
                  g_step=3, d_step=1, d_stepsize=3e-4, verbose=0,
                  _init_setup_model=True, **kwargs):
+        self.trpo = TRPO(policy, env, verbose=verbose, _init_setup_model=False, **kwargs)
         super().__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=False,
                          _init_setup_model=_init_setup_model)
-
-        self.trpo = TRPO(policy, env, verbose=verbose, _init_setup_model=False, **kwargs)
         self.trpo.using_gail = True
         self.trpo.expert_dataset = expert_dataset
         self.trpo.g_step = g_step
@@ -49,7 +48,6 @@ class GAIL(ActorCriticRLModel):
         self.trpo.d_stepsize = d_stepsize
         self.trpo.hidden_size_adversary = hidden_size_adversary
         self.trpo.adversary_entcoeff = adversary_entcoeff
-        self.env = self.trpo.env
 
         if _init_setup_model:
             self.setup_model()
@@ -57,21 +55,28 @@ class GAIL(ActorCriticRLModel):
     def _get_pretrain_placeholders(self):
         pass
 
+    def __getattr__(self, name):
+        if name == 'trpo':
+            return self.__dict__['trpo']
+        else:
+            return getattr(self.trpo, name)
+
+    def __setattr__(self, name, value):
+        if name == 'trpo':
+            self.__dict__['trpo'] = value
+        else:
+            setattr(self.trpo, name, value)
+
     def pretrain(self, dataset, n_epochs=10, learning_rate=1e-4,
                  adam_epsilon=1e-8, val_interval=None):
         self.trpo.pretrain(dataset, n_epochs=n_epochs, learning_rate=learning_rate,
                            adam_epsilon=adam_epsilon, val_interval=val_interval)
         return self
 
-    def set_env(self, env):
-        self.trpo.set_env(env)
-        self.env = self.trpo.env
-
     def setup_model(self):
         assert issubclass(self.policy, ActorCriticPolicy), "Error: the input policy for the GAIL model must be an " \
                                                            "instance of common.policies.ActorCriticPolicy."
         self.trpo.setup_model()
-        self.sess = self.trpo.sess
 
     def learn(self, total_timesteps, callback=None, seed=None, log_interval=100, tb_log_name="GAIL",
               reset_num_timesteps=True):
