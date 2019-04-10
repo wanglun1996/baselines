@@ -204,7 +204,7 @@ class VecEnvWrapper(VecEnv):
     def set_attr(self, attr_name, value, indices=None):
         return self.venv.set_attr(attr_name, value, indices)
 
-    def env_method(self, method_name,  *method_args, indices=None, **method_kwargs):
+    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
         return self.venv.env_method(method_name, *method_args, indices=indices, **method_kwargs)
 
 
