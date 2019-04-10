@@ -53,6 +53,7 @@ class GAIL(ActorCriticRLModel):
         self.trpo.d_stepsize = d_stepsize
         self.trpo.hidden_size_adversary = hidden_size_adversary
         self.trpo.adversary_entcoeff = adversary_entcoeff
+        self.sess = None
 
         if _init_setup_model:
             self.setup_model()
@@ -67,6 +68,7 @@ class GAIL(ActorCriticRLModel):
         assert isinstance(self.action_space, gym.spaces.Box), "Error: GAIL requires a continuous action space."
 
         self.trpo.setup_model()
+        self.sess = self.trpo.sess
 
     def learn(self, total_timesteps, callback=None, seed=None, log_interval=100, tb_log_name="GAIL",
               reset_num_timesteps=True):
