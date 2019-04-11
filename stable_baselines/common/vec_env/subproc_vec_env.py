@@ -142,32 +142,21 @@ class SubprocVecEnv(VecEnv):
         return imgs
 
     def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
-        """
-        Provides an interface to call arbitrary class methods of vectorized environments
-        (See base class)
-        """
+        """Call instance methods of vectorized environments."""
         target_remotes = self._get_target_remotes(indices)
         for remote in target_remotes:
             remote.send(('env_method', (method_name, method_args, method_kwargs)))
         return [remote.recv() for remote in target_remotes]
 
     def get_attr(self, attr_name, indices=None):
-        """
-        Provides a mechanism for getting class attributes from vectorized environments
-        (See base class)
-        (Note: attribute value returned must be picklable)
-        """
+        """Return attribute from vectorized environment (see base class)."""
         target_remotes = self._get_target_remotes(indices)
         for remote in target_remotes:
             remote.send(('get_attr', attr_name))
         return [remote.recv() for remote in target_remotes]
 
     def set_attr(self, attr_name, value, indices=None):
-        """
-        Provides a mechanism for setting arbitrary class attributes inside vectorized environments
-        (See base class)
-        (Note:  the value must be picklable)
-        """
+        """Set attribute inside vectorized environments (see base class)."""
         target_remotes = self._get_target_remotes(indices)
         for remote in target_remotes:
             remote.send(('set_attr', (attr_name, value)))

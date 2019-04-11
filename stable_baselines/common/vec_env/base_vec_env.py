@@ -84,9 +84,22 @@ class VecEnv(ABC):
         pass
 
     @abstractmethod
+    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
+        """
+        Call instance methods of vectorized environments.
+
+        :param method_name: (str) The name of the env class method to invoke
+        :param indices: (list,int) Indices of envs whose method to call
+        :param method_args: (tuple) Any positional arguments to provide in the call
+        :param method_kwargs: (dict) Any keyword arguments to provide in the call
+        :return: (list) List of items returned by the environment's method call
+        """
+        pass
+
+    @abstractmethod
     def get_attr(self, attr_name, indices=None):
         """
-        Provides a mechanism for getting class attributes from vectorized environments
+        Return attribute from vectorized environment.
 
         :param attr_name: (str) The name of the attribute whose value to return
         :param indices: (list,int) Indices of envs to get attribute from
@@ -97,25 +110,12 @@ class VecEnv(ABC):
     @abstractmethod
     def set_attr(self, attr_name, value, indices=None):
         """
-        Provides a mechanism for setting arbitrary class attributes inside vectorized environments
+        Set attribute inside vectorized environments.
 
         :param attr_name: (str) The name of attribute to assign new value
         :param value: (obj) Value to assign to `attr_name`
         :param indices: (list,int) Indices of envs to assign value
         :return: (NoneType)
-        """
-        pass
-
-    @abstractmethod
-    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
-        """
-        Provides an interface to call arbitrary class methods of vectorized environments
-
-        :param method_name: (str) The name of the env class method to invoke
-        :param indices: (list,int) Indices of envs whose method to call
-        :param method_args: (tuple) Any positional arguments to provide in the call
-        :param method_kwargs: (dict) Any keyword arguments to provide in the call
-        :return: (list) List of items returned by the environment's method call
         """
         pass
 
