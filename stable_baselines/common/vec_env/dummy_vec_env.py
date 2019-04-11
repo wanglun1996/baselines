@@ -69,11 +69,6 @@ class DummyVecEnv(VecEnv):
     def _obs_from_buf(self):
         return dict_to_obs(self.observation_space, copy_obs_dict(self.buf_obs))
 
-    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
-        """Call instance methods of vectorized environments."""
-        target_envs = self._get_target_envs(indices)
-        return [getattr(env_i, method_name)(*method_args, **method_kwargs) for env_i in target_envs]
-
     def get_attr(self, attr_name, indices=None):
         """Return attribute from vectorized environment (see base class)."""
         target_envs = self._get_target_envs(indices)
@@ -84,6 +79,11 @@ class DummyVecEnv(VecEnv):
         target_envs = self._get_target_envs(indices)
         for env_i in target_envs:
             setattr(env_i, attr_name, value)
+
+    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
+        """Call instance methods of vectorized environments."""
+        target_envs = self._get_target_envs(indices)
+        return [getattr(env_i, method_name)(*method_args, **method_kwargs) for env_i in target_envs]
 
     def _get_target_envs(self, indices):
         indices = self._get_indices(indices)

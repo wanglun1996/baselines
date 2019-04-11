@@ -141,13 +141,6 @@ class SubprocVecEnv(VecEnv):
         imgs = [pipe.recv() for pipe in self.remotes]
         return imgs
 
-    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
-        """Call instance methods of vectorized environments."""
-        target_remotes = self._get_target_remotes(indices)
-        for remote in target_remotes:
-            remote.send(('env_method', (method_name, method_args, method_kwargs)))
-        return [remote.recv() for remote in target_remotes]
-
     def get_attr(self, attr_name, indices=None):
         """Return attribute from vectorized environment (see base class)."""
         target_remotes = self._get_target_remotes(indices)
@@ -162,6 +155,13 @@ class SubprocVecEnv(VecEnv):
             remote.send(('set_attr', (attr_name, value)))
         for remote in target_remotes:
             remote.recv()
+
+    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
+        """Call instance methods of vectorized environments."""
+        target_remotes = self._get_target_remotes(indices)
+        for remote in target_remotes:
+            remote.send(('env_method', (method_name, method_args, method_kwargs)))
+        return [remote.recv() for remote in target_remotes]
 
     def _get_target_remotes(self, indices):
         """

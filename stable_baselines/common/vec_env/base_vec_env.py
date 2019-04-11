@@ -84,19 +84,6 @@ class VecEnv(ABC):
         pass
 
     @abstractmethod
-    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
-        """
-        Call instance methods of vectorized environments.
-
-        :param method_name: (str) The name of the env class method to invoke
-        :param indices: (list,int) Indices of envs whose method to call
-        :param method_args: (tuple) Any positional arguments to provide in the call
-        :param method_kwargs: (dict) Any keyword arguments to provide in the call
-        :return: (list) List of items returned by the environment's method call
-        """
-        pass
-
-    @abstractmethod
     def get_attr(self, attr_name, indices=None):
         """
         Return attribute from vectorized environment.
@@ -116,6 +103,19 @@ class VecEnv(ABC):
         :param value: (obj) Value to assign to `attr_name`
         :param indices: (list,int) Indices of envs to assign value
         :return: (NoneType)
+        """
+        pass
+
+    @abstractmethod
+    def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
+        """
+        Call instance methods of vectorized environments.
+
+        :param method_name: (str) The name of the environment method to invoke.
+        :param indices: (list,int) Indices of envs whose method to call
+        :param method_args: (tuple) Any positional arguments to provide in the call
+        :param method_kwargs: (dict) Any keyword arguments to provide in the call
+        :return: (list) List of items returned by the environment's method call
         """
         pass
 
