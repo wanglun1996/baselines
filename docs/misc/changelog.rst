@@ -10,6 +10,7 @@ Pre-Release 2.5.1a0 (WIP)
 
 - doc update (fix example of result plotter + improve doc)
 - fixed logger issues when stdout lacks ``read`` function
+- ``GAIL``: remove mandatory matplotlib dependency and refactor as subclass of ``TRPO`` (@kantneel and @AdamGleave)
 
 
 Release 2.5.0 (2019-03-28)
