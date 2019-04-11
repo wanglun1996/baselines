@@ -83,19 +83,20 @@ def test_vecenv_custom_calls(vec_env_class, vec_env_wrapper):
 
     for env_idx in range(N_ENVS):
         assert (env_method_results[env_idx] == np.ones((1, 2))).all()
-        assert setattr_results[env_idx][0] is None
+        assert setattr_results[env_idx] is None
         assert getattr_results[env_idx] == env_idx
 
     # Call env_method on a subset of the VecEnv
     env_method_subset = vec_env.env_method('custom_method', 1, indices=[0, 2], dim_1=3)
     assert (env_method_subset[0] == np.ones((1, 3))).all()
     assert (env_method_subset[1] == np.ones((1, 3))).all()
+    assert len(env_method_subset) == 2
 
 
     # Test to change value for all the environments
     setattr_result = vec_env.set_attr('current_step', 42, indices=None)
     getattr_result = vec_env.get_attr('current_step')
-    assert setattr_result == [None for _ in range(N_ENVS)]
+    assert setattr_result is None
     assert getattr_result == [42 for _ in range(N_ENVS)]
 
     # Additional tests for setattr that does not affect all the environments
@@ -103,7 +104,7 @@ def test_vecenv_custom_calls(vec_env_class, vec_env_wrapper):
     setattr_result = vec_env.set_attr('current_step', 12, indices=[0, 1])
     getattr_result = vec_env.get_attr('current_step')
     getattr_result_subset = vec_env.get_attr('current_step', indices=[0, 1])
-    assert setattr_result == [None for _ in range(2)]
+    assert setattr_result is None
     assert getattr_result == [12 for _ in range(2)] + [0 for _ in range(N_ENVS - 2)]
     assert getattr_result_subset == [12, 12]
     assert vec_env.get_attr('current_step', indices=[0, 2]) == [12, 0]
@@ -112,12 +113,11 @@ def test_vecenv_custom_calls(vec_env_class, vec_env_wrapper):
     # Change value only for first and last environment
     setattr_result = vec_env.set_attr('current_step', 12, indices=[0, -1])
     getattr_result = vec_env.get_attr('current_step')
-    assert setattr_result == [None for _ in range(2)]
+    assert setattr_result is None
     assert getattr_result == [12] + [0 for _ in range(N_ENVS - 2)] + [12]
     assert vec_env.get_attr('current_step', indices=[-1]) == [12]
 
     vec_env.close()
-
 
 
 SPACES = collections.OrderedDict([
