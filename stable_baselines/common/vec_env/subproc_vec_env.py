@@ -172,8 +172,7 @@ class SubprocVecEnv(VecEnv):
         :return: ([multiprocessing.Connection]) Connection object to communicate between processes.
         """
         indices = self._get_indices(indices)
-        target_remotes = [self.remotes[i] for i in indices]
-        return target_remotes
+        return [self.remotes[i] for i in indices]
 
 
 def _flatten_obs(obs, space):
