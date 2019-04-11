@@ -62,9 +62,7 @@ class GAIL(ActorCriticRLModel):
             return getattr(self.trpo, name)
 
     def __setattr__(self, name, value):
-        if name == 'trpo':
-            self.__dict__['trpo'] = value
-        elif 'trpo' not in self.__dict__:
+        if 'trpo' not in self.__dict__:
             self.__dict__[name] = value
         else:
             setattr(self.trpo, name, value)
