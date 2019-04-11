@@ -38,9 +38,9 @@ class GAIL(ActorCriticRLModel):
                  hidden_size_adversary=100, adversary_entcoeff=1e-3,
                  g_step=3, d_step=1, d_stepsize=3e-4, verbose=0,
                  _init_setup_model=True, **kwargs):
-        self.trpo = TRPO(policy, env, verbose=verbose, _init_setup_model=False, **kwargs)
         super().__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=False,
                          _init_setup_model=_init_setup_model)
+        self.trpo = TRPO(policy, env, verbose=verbose, _init_setup_model=False, **kwargs)
         self.trpo.using_gail = True
         self.trpo.expert_dataset = expert_dataset
         self.trpo.g_step = g_step
@@ -64,6 +64,8 @@ class GAIL(ActorCriticRLModel):
     def __setattr__(self, name, value):
         if name == 'trpo':
             self.__dict__['trpo'] = value
+        elif 'trpo' not in self.__dict__:
+            self.__dict__[name] = value
         else:
             setattr(self.trpo, name, value)
 
