@@ -99,10 +99,10 @@ class VecEnv(ABC):
         """
         Provides a mechanism for setting arbitrary class attributes inside vectorized environments
 
-        :param attr_name: (str) Name of attribute to assign new value
-        :param value: (obj) Value to assign to 'attr_name'
+        :param attr_name: (str) The name of attribute to assign new value
+        :param value: (obj) Value to assign to `attr_name`
         :param indices: (list,int) Indices of envs to assign value
-        :return: (list) in case env access methods might return something, they will be returned in a list
+        :return: (NoneType)
         """
         pass
 

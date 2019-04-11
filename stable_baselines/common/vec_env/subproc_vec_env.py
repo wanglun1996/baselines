@@ -171,7 +171,8 @@ class SubprocVecEnv(VecEnv):
         target_remotes = self._get_target_remotes(indices)
         for remote in target_remotes:
             remote.send(('set_attr', (attr_name, value)))
-        return [remote.recv() for remote in target_remotes]
+        for remote in target_remotes:
+            remote.recv()
 
     def _get_target_remotes(self, indices):
         """

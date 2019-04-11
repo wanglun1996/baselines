@@ -91,7 +91,8 @@ class DummyVecEnv(VecEnv):
         (See base class)
         """
         target_envs = self._get_target_envs(indices)
-        return [setattr(env_i, attr_name, value) for env_i in target_envs]
+        for env_i in target_envs:
+            setattr(env_i, attr_name, value)
 
     def _get_target_envs(self, indices):
         indices = self._get_indices(indices)
