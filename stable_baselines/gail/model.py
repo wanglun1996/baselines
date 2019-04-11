@@ -48,9 +48,6 @@ class GAIL(TRPO):
         if _init_setup_model:
             self.setup_model()
 
-    def _get_pretrain_placeholders(self):
-        pass
-
     def learn(self, total_timesteps, callback=None, seed=None, log_interval=100, tb_log_name="GAIL",
               reset_num_timesteps=True):
         assert self.expert_dataset is not None, "You must pass an expert dataset to GAIL for training"
