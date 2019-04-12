@@ -11,6 +11,9 @@ Pre-Release 2.5.1a0 (WIP)
 - doc update (fix example of result plotter + improve doc)
 - fixed logger issues when stdout lacks ``read`` function
 - ``GAIL``: remove mandatory matplotlib dependency and refactor as subclass of ``TRPO`` (@kantneel and @AdamGleave)
+- added ``get_attr()``, ``env_method()`` and ``set_attr()`` methods for all VecEnv. 
+  Those methods now all accept ``indices`` keyword to select a subset of envs. 
+  ``set_attr`` now returns ``None`` rather than a list of ``None``. (@kantneel)
 
 
 Release 2.5.0 (2019-03-28)
@@ -273,3 +276,4 @@ In random order...
 
 Thanks to @bjmuld @iambenzo @iandanforth @r7vme @brendenpetersen @huvar @abhiskk @JohannesAck
 @EliasHasle @mrakgr @Bleyddyn @antoine-galataud @junhyeokahn @AdamGleave @keshaviyengar @tperol
+@kantneel
