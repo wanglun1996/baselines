@@ -154,6 +154,8 @@ class ExpertDataset(object):
         """
         Show histogram plotting of the episode returns
         """
+        # Isolate dependency since it is only used for plotting and also since
+        # different matplotlib backends have further dependencies themselves.
         import matplotlib.pyplot as plt
         plt.hist(self.returns)
         plt.show()
