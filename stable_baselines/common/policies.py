@@ -428,6 +428,7 @@ class FeedForwardPolicy(ActorCriticPolicy):
             if layers is None:
                 layers = [64, 64]
             net_arch = [dict(vf=layers, pi=layers)]
+        self.layers = layers
 
         with tf.variable_scope("model", reuse=reuse):
             if feature_extraction == "cnn":
@@ -436,6 +437,7 @@ class FeedForwardPolicy(ActorCriticPolicy):
                 pi_latent, vf_latent = mlp_extractor(tf.layers.flatten(self.processed_obs), net_arch, act_fun)
 
             self.value_fn = linear(vf_latent, 'vf', 1)
+            self.ff_out = {'value': [vf_latent], 'policy': [pi_latent]}
 
             self.proba_distribution, self.policy, self.q_value = \
                 self.pdtype.proba_distribution_from_latent(pi_latent, vf_latent, init_scale=0.01)
