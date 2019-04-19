@@ -18,7 +18,8 @@ class ExpertDataset(object):
     'rewards', 'obs', 'episode_starts'
     In case of images, 'obs' contains the relative path to the images.
 
-    :param expert_path: (str) the path to trajectory data (.npz file)
+    :param expert_path: (str) The path to trajectory data (.npz file). Mutually exclusive with traj_data.
+    :param traj_data: (dict) Trajectory data, in format described above. Mutually exclusive with expert_path.
     :param train_fraction: (float) the train validation split (0 to 1)
         for pre-training using behavior cloning (BC)
     :param batch_size: (int) the minibatch size for behavior cloning
@@ -29,10 +30,12 @@ class ExpertDataset(object):
         the data (slower but use less memory for the CI)
     """
 
-    def __init__(self, expert_path, train_fraction=0.7, batch_size=64,
-                 traj_limitation=-1, randomize=True, verbose=1,
-                 sequential_preprocessing=False):
-        traj_data = np.load(expert_path)
+    def __init__(self, expert_path=None, traj_data=None, train_fraction=0.7, batch_size=64,
+                 traj_limitation=-1, randomize=True, verbose=1, sequential_preprocessing=False):
+        if traj_data is not None and expert_path is not None:
+            raise ValueError("Cannot specify both 'traj_data' and 'expert_path'")
+        if traj_data is None:
+            traj_data = np.load(expert_path)
 
         if verbose > 0:
             for key, val in traj_data.items():
