@@ -16,6 +16,8 @@ Pre-Release 2.5.1a0 (WIP)
 - added ``get_attr()``, ``env_method()`` and ``set_attr()`` methods for all VecEnv. 
   Those methods now all accept ``indices`` keyword to select a subset of envs.
   ``set_attr`` now returns ``None`` rather than a list of ``None``. (@kantneel)
+- clarified the public interface of ``BasePolicy`` and ``ActorCriticPolicy``. **Breaking change** when using custom policies: ``masks_ph`` is now called ``dones_ph``.
+- support for custom stateful policies.
 
 
 Release 2.5.0 (2019-03-28)
