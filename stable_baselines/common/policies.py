@@ -57,11 +57,15 @@ def mlp_extractor(flat_observations, net_arch, act_fun):
     policy_only_layers = []  # Layer sizes of the network that only belongs to the policy network
     value_only_layers = []  # Layer sizes of the network that only belongs to the value network
 
+    policy_acts = []
+    value_acts = []
     # Iterate through the shared layers and build the shared parts of the network
     for idx, layer in enumerate(net_arch):
         if isinstance(layer, int):  # Check that this is a shared layer
             layer_size = layer
             latent = act_fun(linear(latent, "shared_fc{}".format(idx), layer_size, init_scale=np.sqrt(2)))
+            policy_acts.append(latent)
+            value_acts.append(latent)
         else:
             assert isinstance(layer, dict), "Error: the net_arch list can only contain ints and dicts"
             if 'pi' in layer:
@@ -80,12 +84,14 @@ def mlp_extractor(flat_observations, net_arch, act_fun):
         if pi_layer_size is not None:
             assert isinstance(pi_layer_size, int), "Error: net_arch[-1]['pi'] must only contain integers."
             latent_policy = act_fun(linear(latent_policy, "pi_fc{}".format(idx), pi_layer_size, init_scale=np.sqrt(2)))
+            policy_acts.append(latent_policy)
 
         if vf_layer_size is not None:
             assert isinstance(vf_layer_size, int), "Error: net_arch[-1]['vf'] must only contain integers."
             latent_value = act_fun(linear(latent_value, "vf_fc{}".format(idx), vf_layer_size, init_scale=np.sqrt(2)))
+            value_acts.append(latent_value)
 
-    return latent_policy, latent_value
+    return policy_acts, value_acts
 
 
 class BasePolicy(ABC):
@@ -548,11 +554,13 @@ class FeedForwardPolicy(ActorCriticPolicy):
         with tf.variable_scope("model", reuse=reuse):
             if feature_extraction == "cnn":
                 pi_latent = vf_latent = cnn_extractor(self.processed_obs, **kwargs)
+                self.ff_out = {'value': [vf_latent], 'policy': [pi_latent]}
             else:
-                pi_latent, vf_latent = mlp_extractor(tf.layers.flatten(self.processed_obs), net_arch, act_fun)
+                pi_acts, vf_acts = mlp_extractor(tf.layers.flatten(self.processed_obs), net_arch, act_fun)
+                self.ff_out = {'value': vf_acts, 'policy': pi_acts}
+                pi_latent, vf_latent = pi_acts[-1], vf_acts[-1]
 
             self._value_fn = linear(vf_latent, 'vf', 1)
-            self.ff_out = {'value': [vf_latent], 'policy': [pi_latent]}
 
             self._proba_distribution, self._policy, self.q_value = \
                 self.pdtype.proba_distribution_from_latent(pi_latent, vf_latent, init_scale=0.01)
