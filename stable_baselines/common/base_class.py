@@ -460,7 +460,14 @@ class ActorCriticRLModel(BaseRLModel):
               log_interval=100, tb_log_name="run", reset_num_timesteps=True):
         pass
 
-    def predict(self, observation, state=None, mask=None, deterministic=False):
+    def _get_policy_out(self, observation, state, mask, transparent, deterministic=False):
+        """Helper function that preprocesses inputs to predict(_transparent)
+        Has same parameters as predict except for transparent.
+        Returns same as predict(_transparent) but also returns vectorized_env to be used elsewhere
+
+        :param transparent (bool) whether to use step_transparent for getting policy outputs
+        :return: (tuple, bool) policy_out, vectorized_env
+        """
         if state is None:
             state = self.initial_state
         if mask is None:
@@ -469,19 +476,43 @@ class ActorCriticRLModel(BaseRLModel):
         vectorized_env = self._is_vectorized_observation(observation, self.observation_space)
 
         observation = observation.reshape((-1,) + self.observation_space.shape)
-        actions, _, states, _ = self.step(observation, state, mask, deterministic=deterministic)
+        step_fn = self.policy.step_transparent if transparent else self.step
+        policy_out = step_fn(observation, state, mask, deterministic=deterministic)
+        return policy_out, vectorized_env
 
+    def _get_clipped_actions(self, actions, states, vectorized_env):
+        """Helper function that clips actions and validates vectorized_env according to states
+
+        :param actions: ([float]) actions returned from policy.step(_transparent)
+        :param states: states ([float]) returned from policy.step(_transparent)
+        :param vectorized_env: (bool) whether the environment is vectorized
+        :return: ([float]) clipped_actions
+        """
         clipped_actions = actions
         # Clip the actions to avoid out of bound error
         if isinstance(self.action_space, gym.spaces.Box):
             clipped_actions = np.clip(actions, self.action_space.low, self.action_space.high)
 
         if not vectorized_env:
-            if state is not None:
+            if states is not None:
                 raise ValueError("Error: The environment must be vectorized when using recurrent policies.")
             clipped_actions = clipped_actions[0]
+        return clipped_actions
 
+    def predict(self, observation, state=None, mask=None, deterministic=False):
+        policy_out, vectorized_env = self._get_policy_out(observation, state, mask, False,
+                                                          deterministic=deterministic)
+        actions, _val, states, _neglogp = policy_out
+        clipped_actions = self._get_clipped_actions(actions, states, vectorized_env)
         return clipped_actions, states
+
+    def predict_transparent(self, observation, state=None, mask=None, deterministic=False):
+        """Returns same values as predict, as well as a dictionary with transparent data."""
+        policy_out, vectorized_env = self._get_policy_out(observation, state, mask, True,
+                                                          deterministic=deterministic)
+        actions, _val, states, _neglogp, data = policy_out
+        clipped_actions = self._get_clipped_actions(actions, states, vectorized_env)
+        return clipped_actions, states, data
 
     def action_probability(self, observation, state=None, mask=None, actions=None):
         if state is None:
