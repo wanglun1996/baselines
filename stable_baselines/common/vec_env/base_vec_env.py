@@ -207,6 +207,8 @@ class VecEnvWrapper(VecEnv):
     def env_method(self, method_name, *method_args, indices=None, **method_kwargs):
         return self.venv.env_method(method_name, *method_args, indices=indices, **method_kwargs)
 
+    def __getattr__(self, name):
+        return getattr(self.venv, name)
 
 class CloudpickleWrapper(object):
     def __init__(self, var):
