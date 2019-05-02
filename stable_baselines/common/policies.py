@@ -111,7 +111,7 @@ class BasePolicy(ABC):
     :param add_action_ph: (bool) whether or not to create an action placeholder
     """
 
-    stateful = False
+    recurrent = False
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, scale=False,
                  obs_phs=None, add_action_ph=False):
@@ -134,15 +134,16 @@ class BasePolicy(ABC):
 
     @property
     def is_discrete(self):
+        """bool: is action space discrete."""
         return isinstance(self.ac_space, Discrete)
 
     @property
     def initial_state(self):
         """
-        The initial state of the policy. For stateless policies, None. For a stateful policy,
+        The initial state of the policy. For feedforward policies, None. For a recurrent policy,
         a NumPy array of shape (self.n_env, ) + state_shape.
         """
-        assert not self.stateful
+        assert not self.recurrent, "When using recurrent policies, you must overwrite `initial_state()` method"
         return None
 
     @property
@@ -250,7 +251,7 @@ class ActorCriticPolicy(BasePolicy):
                                      for categorical in self.proba_distribution.categoricals]
             else:
                 self._policy_proba = []  # it will return nothing, as it is not implemented
-            self._value_tensor = self.value_fn[:, 0]
+            self._value_flat = self.value_fn[:, 0]
 
     @property
     def pdtype(self):
@@ -275,7 +276,7 @@ class ActorCriticPolicy(BasePolicy):
     @property
     def value_flat(self):
         """tf.Tensor: value estimate, of shape (self.n_batch, )"""
-        return self._value_tensor
+        return self._value_flat
 
     @property
     def action(self):
@@ -289,7 +290,7 @@ class ActorCriticPolicy(BasePolicy):
 
     @property
     def neglogp(self):
-        """tf.Tensor: negative log probability of the action sampled by self.action."""
+        """tf.Tensor: negative log likelihood of the action sampled by self.action."""
         return self._neglogp
 
     @property
@@ -323,9 +324,11 @@ class ActorCriticPolicy(BasePolicy):
         raise NotImplementedError
 
 
-class StatefulActorCriticPolicy(ActorCriticPolicy):
+class RecurrentActorCriticPolicy(ActorCriticPolicy):
     """
-    Actor critic policy object that is stateful.
+    Actor critic policy object uses a previous state in the computation for the current step.
+    NOTE: this class is not limited to recurrent neural network policies,
+    see https://github.com/hill-a/stable-baselines/issues/241
 
     :param sess: (TensorFlow session) The current TensorFlow session
     :param ob_space: (Gym Space) The observation space of the environment
@@ -338,12 +341,12 @@ class StatefulActorCriticPolicy(ActorCriticPolicy):
     :param scale: (bool) whether or not to scale the input
     """
 
-    stateful = True
+    recurrent = True
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch,
                  state_shape, reuse=False, scale=False):
-        super(StatefulActorCriticPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps,
-                                                        n_batch, reuse=reuse, scale=scale)
+        super(RecurrentActorCriticPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps,
+                                                         n_batch, reuse=reuse, scale=scale)
 
         with tf.variable_scope("input", reuse=False):
             self._dones_ph = tf.placeholder(tf.float32, (n_batch, ), name="dones_ph")  # (done t-1)
@@ -368,8 +371,15 @@ class StatefulActorCriticPolicy(ActorCriticPolicy):
         """tf.Tensor: placeholder for states, shape (self.n_env, ) + state_shape."""
         return self._states_ph
 
+    @abstractmethod
+    def value(self, obs, state=None, mask=None):
+        """
+        Cf base class doc.
+        """
+        raise NotImplementedError
 
-class LstmPolicy(StatefulActorCriticPolicy):
+
+class LstmPolicy(RecurrentActorCriticPolicy):
     """
     Policy object that implements actor critic, using LSTMs.
 
@@ -391,7 +401,7 @@ class LstmPolicy(StatefulActorCriticPolicy):
     :param kwargs: (dict) Extra keyword arguments for the nature CNN feature extraction
     """
 
-    stateful = True
+    recurrent = True
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, n_lstm=256, reuse=False, layers=None,
                  net_arch=None, act_fun=tf.tanh, cnn_extractor=nature_cnn, layer_norm=False, feature_extraction="cnn",

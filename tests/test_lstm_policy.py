@@ -42,11 +42,12 @@ class CartPoleNoVelEnv(CartPoleEnv):
     """Variant of CartPoleEnv with velocity information removed. This task requires memory to solve."""
 
     def __init__(self):
-        super().__init__()
-        idxs = [0, 2]
-        low = self.observation_space.low[idxs]
-        high = self.observation_space.high[idxs]
-        self.observation_space = spaces.Box(low, high, dtype=np.float32)
+        super(CartPoleNoVelEnv, self).__init__()
+        high = np.array([
+            self.x_threshold * 2,
+            self.theta_threshold_radians * 2,
+        ])
+        self.observation_space = spaces.Box(-high, high, dtype=np.float32)
 
     @staticmethod
     def _pos_obs(full_obs):

@@ -98,7 +98,7 @@ class BaseRLModel(ABC):
             assert isinstance(env, VecEnv), \
                 "Error: the environment passed is not a vectorized environment, however {} requires it".format(
                     self.__class__.__name__)
-            assert not self.policy.stateful or self.n_envs == env.num_envs, \
+            assert not self.policy.recurrent or self.n_envs == env.num_envs, \
                 "Error: the environment passed must have the same number of environments as the model was trained on." \
                 "This is due to the Lstm policy not being capable of changing the number of environments."
             self.n_envs = env.num_envs

@@ -88,7 +88,7 @@ class HER(BaseRLModel):
 
             assert isinstance(self.action_space, gym.spaces.Box), \
                 "Error: HER cannot output a {} action space, only spaces.Box is supported.".format(self.action_space)
-            assert not self.policy.stateful, "Error: cannot use a recurrent policy for the HER model."
+            assert not self.policy.recurrent, "Error: cannot use a recurrent policy for the HER model."
             assert issubclass(self.policy, ActorCriticPolicy), "Error: the input policy for the HER model must be an " \
                                                                "instance of common.policies.ActorCriticPolicy."
 
