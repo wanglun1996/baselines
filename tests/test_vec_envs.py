@@ -226,7 +226,7 @@ class CustomWrapperB(VecNormalize):
         self.var_b = 'b'
 
     def func_b(self):
-        return 'b'
+        return self.var_b
 
     def name_test(self):
         return self.__class__
