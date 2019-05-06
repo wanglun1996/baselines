@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import inspect
 import pickle
 
 import cloudpickle
@@ -239,8 +240,11 @@ class VecEnvWrapper(VecEnv):
         :param name (str) name of attribute to look for
         :return: (object) attribute
         """
-        if name in self.__dict__:  # attribute is present in this wrapper
-            attr = self.__dict__[name]
+        class_attributes = {k: v for k, v in inspect.getmembers(self.__class__)}
+        all_attributes = self.__dict__.copy()
+        all_attributes.update(class_attributes)
+        if name in all_attributes:  # attribute is present in this wrapper
+            attr = getattr(self, name)
         elif hasattr(self.venv, 'getattr_recursive'):
             # Attribute not present, child is wrapper. Call getattr_recursive rather than getattr
             # to avoid a duplicate call to getattr_depth_check.
