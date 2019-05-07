@@ -235,14 +235,22 @@ class VecEnvWrapper(VecEnv):
 
         return self.getattr_recursive(name)
 
+    def _get_all_attributes(self):
+        """Get all (inherited) instance and class attributes
+
+        :return: (dict<str, object>) all_attributes
+        """
+        all_attributes = self.__dict__.copy()
+        all_attributes.update(self.class_attributes)
+        return all_attributes
+
     def getattr_recursive(self, name):
         """Recursively check wrappers to find attribute.
 
         :param name (str) name of attribute to look for
         :return: (object) attribute
         """
-        all_attributes = self.__dict__.copy()
-        all_attributes.update(self.class_attributes)
+        all_attributes = self._get_all_attributes()
         if name in all_attributes:  # attribute is present in this wrapper
             attr = getattr(self, name)
         elif hasattr(self.venv, 'getattr_recursive'):
@@ -259,10 +267,11 @@ class VecEnvWrapper(VecEnv):
 
         :return: (str or None) name of module whose attribute is being shadowed, if any.
         """
-        if name in self.__dict__ and already_found:
+        all_attributes = self._get_all_attributes()
+        if name in all_attributes and already_found:
             # this venv's attribute is being hidden because of a higher venv.
             shadowed_wrapper_class = "{0}.{1}".format(type(self).__module__, type(self).__name__)
-        elif name in self.__dict__ and not already_found:
+        elif name in all_attributes and not already_found:
             # we have found the first reference to the attribute. Now check for duplicates.
             shadowed_wrapper_class = self.venv.getattr_depth_check(name, True)
         else:
