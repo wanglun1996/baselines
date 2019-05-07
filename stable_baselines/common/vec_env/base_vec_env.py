@@ -190,6 +190,7 @@ class VecEnvWrapper(VecEnv):
         self.venv = venv
         VecEnv.__init__(self, num_envs=venv.num_envs, observation_space=observation_space or venv.observation_space,
                         action_space=action_space or venv.action_space)
+        self.class_attributes = dict(inspect.getmembers(self.__class__))
 
     def step_async(self, actions):
         self.venv.step_async(actions)
@@ -240,9 +241,8 @@ class VecEnvWrapper(VecEnv):
         :param name (str) name of attribute to look for
         :return: (object) attribute
         """
-        class_attributes = {k: v for k, v in inspect.getmembers(self.__class__)}
         all_attributes = self.__dict__.copy()
-        all_attributes.update(class_attributes)
+        all_attributes.update(self.class_attributes)
         if name in all_attributes:  # attribute is present in this wrapper
             attr = getattr(self, name)
         elif hasattr(self.venv, 'getattr_recursive'):
