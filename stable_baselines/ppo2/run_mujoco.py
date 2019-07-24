@@ -30,8 +30,13 @@ def train(env_id, num_timesteps, seed):
     set_global_seeds(seed)
     policy = MlpPolicy
     model = PPO2(policy=policy, env=env, n_steps=2048, nminibatches=32, lam=0.95, gamma=0.99, noptepochs=10,
-                 ent_coef=0.0, learning_rate=3e-4, cliprange=0.2)
+                 ent_coef=0.0, learning_rate=3e-4, cliprange=0.2, verbose=1)
     model.learn(total_timesteps=num_timesteps)
+
+    out_path = f'outputs/{env_id}_{seed}'
+    os.makedirs(out_path)
+    model.save(os.path.join(out_path, 'model.pkl'))
+    env.save_running_average(out_path)
 
     return model, env
 
