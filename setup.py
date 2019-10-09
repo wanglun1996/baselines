@@ -12,7 +12,7 @@ if sys.version_info.major != 3:
 install_tf, tf_gpu = False, False
 try:
     import tensorflow as tf
-    if tf.__version__ < LooseVersion('1.5.0'):
+    if tf.__version__ < LooseVersion('1.8.0'):
         install_tf = True
         # check if a gpu version is needed
         tf_gpu = tf.test.is_gpu_available()
@@ -29,7 +29,7 @@ except ImportError:
 
 tf_dependency = []
 if install_tf:
-    tf_dependency = ['tensorflow-gpu>=1.5.0'] if tf_gpu else ['tensorflow>=1.5.0']
+    tf_dependency = ['tensorflow-gpu>=1.8.0,<2.0.0'] if tf_gpu else ['tensorflow>=1.8.0,<2.0.0']
     if tf_gpu:
         print("A GPU was detected, tensorflow-gpu will be installed")
 
@@ -50,6 +50,7 @@ This toolset is a fork of OpenAI Baselines, with a major structural refactoring,
 -   PEP8 compliant (unified code style)
 -   Documented functions and classes
 -   More tests & more code coverage
+-   Additional algorithms: SAC and TD3 (+ HER support for DQN, DDPG, SAC and TD3)
 
 ## Links
 
@@ -107,23 +108,19 @@ setup(name='stable_baselines',
       install_requires=[
           'gym[atari,classic_control]>=0.10.9',
           'scipy',
-          'tqdm',
           'joblib',
-          'zmq',
-          'dill',
-          'mpi4py',
           'cloudpickle>=0.5.5',
-          'click',
           'opencv-python',
           'numpy',
           'pandas',
-          'matplotlib',
-          'seaborn',
-          'glob2'
+          'matplotlib'
       ] + tf_dependency,
       extras_require={
+        'mpi': [
+            'mpi4py',
+        ],
         'tests': [
-            'pytest==3.5.1',
+            'pytest',
             'pytest-cov',
             'pytest-env',
             'pytest-xdist',
@@ -143,7 +140,7 @@ setup(name='stable_baselines',
       license="MIT",
       long_description=long_description,
       long_description_content_type='text/markdown',
-      version="2.5.1",
+      version="2.8.0",
       )
 
 # python setup.py sdist

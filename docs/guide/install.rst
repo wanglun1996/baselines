@@ -10,6 +10,12 @@ Baselines requires python3 (>=3.5) with the development headers. You'll
 also need system packages CMake, OpenMPI and zlib. Those can be
 installed as follows
 
+.. note::
+
+	Stable-Baselines supports Tensorflow versions from 1.8.0 to 1.14.0, and does not work on
+	Tensorflow versions 2.0.0 and above. Support for Tensorflow 2 API is planned.
+
+
 Ubuntu
 ~~~~~~
 
@@ -21,7 +27,7 @@ Mac OS X
 ~~~~~~~~
 
 Installation of system packages on Mac requires `Homebrew`_. With
-Homebrew installed, run the follwing:
+Homebrew installed, run the following:
 
 .. code-block:: bash
 
@@ -47,12 +53,27 @@ We recommend using `Anaconda <https://conda.io/docs/user-guide/install/windows.h
 (using again ``pip install -e .``)
 
 
+.. _openmpi:
+
 Stable Release
---------------
+~~~~~~~~~~~~~~
+To install with support for all algorithms, including those depending on OpenMPI, execute:
+
+.. code-block:: bash
+
+    pip install stable-baselines[mpi]
+
+GAIL, DDPG, TRPO, and PPO1 parallelize training using OpenMPI. OpenMPI has had weird
+interactions with Tensorflow in the past (see
+`Issue #430 <https://github.com/hill-a/stable-baselines/issues/430>`_) and so if you do not
+intend to use these algorithms we recommend installing without OpenMPI. To do this, execute:
 
 .. code-block:: bash
 
     pip install stable-baselines
+
+If you have already installed with MPI support, you can disable MPI by uninstalling ``mpi4py``
+with ``pip uninstall mpi4py``.
 
 
 Bleeding-edge version
@@ -125,7 +146,7 @@ Or, with the shell file:
 
 .. code-block:: bash
 
-   ./run_docker_gpu.sh pytest tests/
+   ./scripts/run_docker_gpu.sh pytest tests/
 
 Run the docker CPU image
 
@@ -137,7 +158,7 @@ Or, with the shell file:
 
 .. code-block:: bash
 
-   ./run_docker_cpu.sh pytest tests/
+   ./scripts/run_docker_cpu.sh pytest tests/
 
 Explanation of the docker command:
 

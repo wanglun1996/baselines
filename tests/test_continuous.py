@@ -5,14 +5,9 @@ import gym
 import pytest
 import numpy as np
 
-from stable_baselines import A2C, SAC
+from stable_baselines import A2C, ACKTR, SAC, DDPG, PPO1, PPO2, TRPO, TD3
 # TODO: add support for continuous actions
 # from stable_baselines.acer import ACER
-# from stable_baselines.acktr import ACKTR
-from stable_baselines.ddpg import DDPG
-from stable_baselines.ppo1 import PPO1
-from stable_baselines.ppo2 import PPO2
-from stable_baselines.trpo_mpi import TRPO
 from stable_baselines.common import set_global_seeds
 from stable_baselines.common.vec_env import DummyVecEnv
 from stable_baselines.common.identity_env import IdentityEnvBox
@@ -26,11 +21,12 @@ NUM_TIMESTEPS = 15000
 MODEL_LIST = [
     A2C,
     # ACER,
-    # ACKTR,
+    ACKTR,
     DDPG,
     PPO1,
     PPO2,
     SAC,
+    TD3,
     TRPO
 ]
 
@@ -62,7 +58,7 @@ def test_model_manipulation(request, model_class):
         acc_reward = sum(acc_reward) / N_TRIALS
 
         # saving
-        model_fname = './test_model_{}.pkl'.format(request.node.name)
+        model_fname = './test_model_{}.zip'.format(request.node.name)
         model.save(model_fname)
 
         del model, env
@@ -87,7 +83,7 @@ def test_model_manipulation(request, model_class):
         with pytest.warns(None) as record:
             act_prob = model.action_probability(obs)
 
-        if model_class in [DDPG, SAC]:
+        if model_class in [DDPG, SAC, TD3]:
             # check that only one warning was raised
             assert len(record) == 1, "No warning was raised for {}".format(model_class)
             assert act_prob is None, "Error: action_probability should be None for {}".format(model_class)
@@ -104,14 +100,15 @@ def test_model_manipulation(request, model_class):
         observations = observations.reshape((-1, 1))
         actions = np.array([env.action_space.sample() for _ in range(10)])
 
-        if model_class == DDPG:
+        if model_class in [DDPG, SAC, TD3]:
             with pytest.raises(ValueError):
                 model.action_probability(observations, actions=actions)
         else:
-            with pytest.warns(UserWarning):
-                actions_probas = model.action_probability(observations, actions=actions)
+            actions_probas = model.action_probability(observations, actions=actions)
             assert actions_probas.shape == (len(actions), 1), actions_probas.shape
-            assert np.all(actions_probas == 0.0), actions_probas
+            assert np.all(actions_probas >= 0), actions_probas
+            actions_logprobas = model.action_probability(observations, actions=actions, logp=True)
+            assert np.allclose(actions_probas, np.exp(actions_logprobas)), (actions_probas, actions_logprobas)
 
         # assert <15% diff
         assert abs(acc_reward - loaded_acc_reward) / max(acc_reward, loaded_acc_reward) < 0.15, \
@@ -146,8 +143,8 @@ def test_model_manipulation(request, model_class):
         del model, env
 
     finally:
-        if os.path.exists("./test_model"):
-            os.remove("./test_model")
+        if os.path.exists("./test_model.zip"):
+            os.remove("./test_model.zip")
 
 
 def test_ddpg():
@@ -180,9 +177,9 @@ def test_ddpg_normalization():
     model.learn(1000)
     obs_rms_params = model.sess.run(model.obs_rms_params)
     ret_rms_params = model.sess.run(model.ret_rms_params)
-    model.save('./test_ddpg.pkl')
+    model.save('./test_ddpg.zip')
 
-    loaded_model = DDPG.load('./test_ddpg.pkl')
+    loaded_model = DDPG.load('./test_ddpg.zip')
     obs_rms_params_2 = loaded_model.sess.run(loaded_model.obs_rms_params)
     ret_rms_params_2 = loaded_model.sess.run(loaded_model.ret_rms_params)
 
@@ -192,8 +189,8 @@ def test_ddpg_normalization():
 
     del model, loaded_model
 
-    if os.path.exists("./test_ddpg.pkl"):
-        os.remove("./test_ddpg.pkl")
+    if os.path.exists("./test_ddpg.zip"):
+        os.remove("./test_ddpg.zip")
 
 
 def test_ddpg_popart():

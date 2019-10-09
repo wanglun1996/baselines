@@ -17,6 +17,8 @@ def _worker(remote, parent_remote, env_fn_wrapper):
             if cmd == 'step':
                 observation, reward, done, info = env.step(data)
                 if done:
+                    # save final observation where user can get it, then reset
+                    info['terminal_observation'] = observation
                     observation = env.reset()
                 remote.send((observation, reward, done, info))
             elif cmd == 'reset':
@@ -44,22 +46,26 @@ def _worker(remote, parent_remote, env_fn_wrapper):
 
 class SubprocVecEnv(VecEnv):
     """
-    Creates a multiprocess vectorized wrapper for multiple environments
+    Creates a multiprocess vectorized wrapper for multiple environments, distributing each environment to its own
+    process, allowing significant speed up when the environment is computationally complex.
+
+    For performance reasons, if your environment is not IO bound, the number of environments should not exceed the
+    number of logical cores on your CPU.
 
     .. warning::
 
         Only 'forkserver' and 'spawn' start methods are thread-safe,
-        which is important when TensorFlow
-        sessions or other non thread-safe libraries are used in the parent (see issue #217).
-        However, compared to 'fork' they incur a small start-up cost and have restrictions on
-        global variables. With those methods,
-        users must wrap the code in an ``if __name__ == "__main__":``
+        which is important when TensorFlow sessions or other non thread-safe
+        libraries are used in the parent (see issue #217). However, compared to
+        'fork' they incur a small start-up cost and have restrictions on
+        global variables. With those methods, users must wrap the code in an
+        ``if __name__ == "__main__":`` block.
         For more information, see the multiprocessing documentation.
 
     :param env_fns: ([Gym Environment]) Environments to run in subprocesses
     :param start_method: (str) method used to start the subprocesses.
            Must be one of the methods returned by multiprocessing.get_all_start_methods().
-           Defaults to 'fork' on available platforms, and 'spawn' otherwise.
+           Defaults to 'forkserver' on available platforms, and 'spawn' otherwise.
     """
 
     def __init__(self, env_fns, start_method=None):
@@ -71,8 +77,8 @@ class SubprocVecEnv(VecEnv):
             # Fork is not a thread safe method (see issue #217)
             # but is more user friendly (does not require to wrap the code in
             # a `if __name__ == "__main__":`)
-            fork_available = 'fork' in multiprocessing.get_all_start_methods()
-            start_method = 'fork' if fork_available else 'spawn'
+            forkserver_available = 'forkserver' in multiprocessing.get_all_start_methods()
+            start_method = 'forkserver' if forkserver_available else 'spawn'
         ctx = multiprocessing.get_context(start_method)
 
         self.remotes, self.work_remotes = zip(*[ctx.Pipe() for _ in range(n_envs)])
