@@ -198,8 +198,8 @@ def lstm(input_tensor, mask_tensor, cell_state_hidden, scope, n_hidden, init_sca
     """
     _, n_input = [v.value for v in input_tensor[0].get_shape()]
     with tf.variable_scope(scope):
-        weight_x = tf.get_variable("wx", [n_input, n_hidden * 4], initializer=ortho_init(init_scale))
-        weight_h = tf.get_variable("wh", [n_hidden, n_hidden * 4], initializer=ortho_init(init_scale))
+        weight_x = tf.get_variable("wx", [n_input, n_hidden * 4]) # , initializer=ortho_init(init_scale))
+        weight_h = tf.get_variable("wh", [n_hidden, n_hidden * 4]) # , initializer=ortho_init(init_scale))
         bias = tf.get_variable("b", [n_hidden * 4], initializer=tf.constant_initializer(0.0))
 
         if layer_norm:
