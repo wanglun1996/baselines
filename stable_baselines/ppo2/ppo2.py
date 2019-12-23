@@ -96,8 +96,8 @@ class PPO2(ActorCriticRLModel):
 
     @classmethod
     def load(cls, load_path):
-        super(PPO2, cls).load(load_path)
         cls.loaded = True
+        return super(PPO2, cls).load(load_path)
 
     def _get_pretrain_placeholders(self):
         policy = self.act_model
