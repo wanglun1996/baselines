@@ -469,9 +469,10 @@ class ActorCriticRLModel(BaseRLModel):
         :return: (tuple, bool) policy_out, vectorized_env
         """
         if state is None:
-            state = self.initial_state
+            initial_state_shape = (observation.shape[0], ) + tuple([self.initial_state.shape[1]])   
+            state = np.zeros(initial_state_shape, dtype=np.float32)
         if mask is None:
-            mask = [False for _ in range(self.n_envs)]
+            mask = [False for _ in range(observation.shape[0])]
         observation = np.array(observation)
         vectorized_env = self._is_vectorized_observation(observation, self.observation_space)
 

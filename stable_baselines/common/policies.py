@@ -349,9 +349,10 @@ class RecurrentActorCriticPolicy(ActorCriticPolicy):
                                                          n_batch, reuse=reuse, scale=scale)
 
         with tf.variable_scope("input", reuse=False):
-            self._dones_ph = tf.placeholder(tf.float32, (n_batch, ), name="dones_ph")  # (done t-1)
-            state_ph_shape = (self.n_env, ) + tuple(state_shape)
+            self._dones_ph = tf.placeholder(tf.float32, (None, ), name="dones_ph")  # (done t-1)
+            state_ph_shape = (None, ) + tuple(state_shape)
             self._states_ph = tf.placeholder(tf.float32, state_ph_shape, name="states_ph")
+
 
         initial_state_shape = (self.n_env, ) + tuple(state_shape)
         self._initial_state = np.zeros(initial_state_shape, dtype=np.float32)

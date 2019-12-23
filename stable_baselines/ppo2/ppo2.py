@@ -267,14 +267,14 @@ class PPO2(ActorCriticRLModel):
                print("Pretraining with Behavior Cloning...")
 
            for epoch_idx in range(int(n_epochs)):
-               # print('epoch_id: ' + str(epoch_idx))
                train_loss = 0.0
-               states = self.act_model.initial_state
+               states = None
                # Full pass on the training set
                for _ in range(dataset.max_train_traj_length):
-                   # print(i)
                    expert_obs, expert_actions, expert_dones = dataset.get_next_batch(split='train')
-                   # print(expert_obs)
+                   if states is None:
+                       initial_state_shape = (expert_obs.shape[0], ) + tuple([self.initial_state.shape[1]])
+                       states = np.zeros(initial_state_shape, dtype=np.float32)
                    feed_dict = {
                        obs_ph: expert_obs,
                        actions_ph: expert_actions,
