@@ -261,6 +261,10 @@ class PPO2(ActorCriticRLModel):
 
                if not self.loaded:
                    self.sess.run(tf.global_variables_initializer())
+               else:
+                   uninitialized_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, "pretrain")
+                   init_op = tf.variables_initializer(var_list=uninitialized_variables)
+                   self.sess.run(init_op)
 
            if self.verbose > 0:
                print("Pretraining with Behavior Cloning...")
