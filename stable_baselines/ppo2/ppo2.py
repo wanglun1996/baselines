@@ -95,8 +95,8 @@ class PPO2(ActorCriticRLModel):
             self.setup_model()
 
     @classmethod
-    def load(cls, load_path):
-        model = super(PPO2, cls).load(load_path)
+    def load(cls, load_path, env=None, **kwargs):
+        model = super(PPO2, cls).load(load_path, env, kwargs)
         model.loaded = True
         return model
 
