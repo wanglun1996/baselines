@@ -94,13 +94,11 @@ class PPO2(ActorCriticRLModel):
         if _init_setup_model:
             self.setup_model()
 
-    def load(self, load_path):
-        self.loaded = True
-        return super(PPO2, self).load(load_path)
-
     @classmethod
-    def load_model(cls, load_path):
-        return super(PPO2, cls).load(load_path)
+    def load(cls, load_path):
+        model = super(PPO2, cls).load(load_path)
+        model.loaded = True
+        return model
 
     def _get_pretrain_placeholders(self):
         policy = self.act_model
@@ -298,10 +296,12 @@ class PPO2(ActorCriticRLModel):
 
                if self.verbose > 0 and (epoch_idx + 1) % val_interval == 0:
                    val_loss = 0.0
-                   states = self.act_model.initial_state
                    # Full pass on the validation set
                    for _ in range(dataset.max_train_traj_length):
                        expert_obs, expert_actions, expert_dones = dataset.get_next_batch(split='val')
+                       if states is None:
+                           initial_state_shape = (expert_obs.shape[0], ) + tuple([self.initial_state.shape[1]])
+                           states = np.zeros(initial_state_shape, dtype=np.float32)
                        feed_dict = {
                            obs_ph: expert_obs,
                            actions_ph: expert_actions,
