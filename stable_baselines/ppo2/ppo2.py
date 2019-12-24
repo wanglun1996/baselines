@@ -94,8 +94,12 @@ class PPO2(ActorCriticRLModel):
         if _init_setup_model:
             self.setup_model()
 
-    def load(cls, load_path):
-        cls.loaded = True
+    def load(self, load_path):
+        self.loaded = True
+        return super(PPO2, self).load(load_path)
+
+    @classmethod
+    def load_model(cls, load_path):
         return super(PPO2, cls).load(load_path)
 
     def _get_pretrain_placeholders(self):
