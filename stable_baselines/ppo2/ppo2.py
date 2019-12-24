@@ -94,7 +94,6 @@ class PPO2(ActorCriticRLModel):
         if _init_setup_model:
             self.setup_model()
 
-    @classmethod
     def load(cls, load_path):
         cls.loaded = True
         return super(PPO2, cls).load(load_path)
