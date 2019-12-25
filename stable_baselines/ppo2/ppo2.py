@@ -89,7 +89,7 @@ class PPO2(ActorCriticRLModel):
         self.summary = None
         self.episode_reward = None
         # !!! new added
-        self.loaded = False
+        self.initialized = False
 
         if _init_setup_model:
             self.setup_model()
@@ -97,7 +97,7 @@ class PPO2(ActorCriticRLModel):
     @classmethod
     def load(cls, load_path, env=None, **kwargs):
         model = super(PPO2, cls).load(load_path, env, **kwargs)
-        model.loaded = True
+        model.initialized = True
         return model
 
     def _get_pretrain_placeholders(self):
@@ -261,8 +261,9 @@ class PPO2(ActorCriticRLModel):
                    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=adam_epsilon)
                    optim_op = optimizer.minimize(loss, var_list=self.params)
 
-               if not self.loaded:
+               if not self.initialized:
                    self.sess.run(tf.global_variables_initializer())
+                   self.initialized = True
                else:
                    uninitialized_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, "pretrain")
                    init_op = tf.variables_initializer(var_list=uninitialized_variables)
