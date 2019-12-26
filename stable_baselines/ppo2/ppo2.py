@@ -223,7 +223,7 @@ class PPO2(ActorCriticRLModel):
 
                 self.summary = tf.summary.merge_all()
 
-    def pretrain_lstm(self, dataset, n_epochs=10, learning_rate=1e-4, adam_epsilon=1e-8, val_interval=None):
+    def pretrain_lstm(self, dataset, n_epochs=10, learning_rate=1e-4, adam_epsilon=1e-8, val_interval=None, fix_first_layer=False):
 
        if str(self.policy) == "<class 'stable_baselines.common.policies.MlpPolicy'>":
            super(MyPPO2, self).pretrain(dataset, n_epochs=n_epochs, learning_rate=learning_rate, adam_epsilon=adam_epsilon, val_interval=val_interval) 
@@ -259,7 +259,11 @@ class PPO2(ActorCriticRLModel):
                        # )
                        # loss = tf.reduce_mean(loss)
                    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=adam_epsilon)
-                   optim_op = optimizer.minimize(loss, var_list=self.params)
+                   if fix_first_layer:
+                       params = self.params[4:7] + self.params[9:11]
+                   else:
+                       params = self.params
+                   optim_op = optimizer.minimize(loss, var_list=params)
 
                if not self.initialized:
                    self.sess.run(tf.global_variables_initializer())
