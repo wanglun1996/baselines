@@ -243,7 +243,7 @@ class PPO2(ActorCriticRLModel):
                    val_interval = int(n_epochs / 10)
 
            with self.graph.as_default():
-               with tf.variable_scope('pretrain'):
+               with tf.variable_scope('pretrain', reuse=tf.AUTO_REUSE):
                    if continuous_actions:
                        obs_ph, actions_ph, dones_ph, states_ph, deterministic_actions_ph = self._get_lstm_pretrain_placeholders()
                        loss = tf.reduce_mean(tf.square(actions_ph - deterministic_actions_ph))
