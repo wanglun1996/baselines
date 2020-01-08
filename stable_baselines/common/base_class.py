@@ -468,7 +468,7 @@ class ActorCriticRLModel(BaseRLModel):
         :param transparent (bool) whether to use step_transparent for getting policy outputs
         :return: (tuple, bool) policy_out, vectorized_env
         """
-        if state is None:
+        if state is None and self.initial_state is not None:
             initial_state_shape = (observation.shape[0], ) + tuple([self.initial_state.shape[1]])   
             state = np.zeros(initial_state_shape, dtype=np.float32)
         if mask is None:
