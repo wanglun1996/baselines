@@ -47,7 +47,7 @@ class PPO2(ActorCriticRLModel):
                  full_tensorboard_log=False, n_envs=64, observation_space=None, action_space=None):
 
         super(PPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
-                                   _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs, n_envs=n_envs, observation_space=obesrvation_space, action_space=action_space)
+                                   _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs, n_envs=n_envs, observation_space=observation_space, action_space=action_space)
 
         self.learning_rate = learning_rate
         self.cliprange = cliprange
