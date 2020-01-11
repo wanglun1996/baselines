@@ -228,7 +228,7 @@ class BaseRLModel(ABC):
             train_loss = 0.0
             # Full pass on the training set
             for _ in range(dataset.max_train_traj_length):
-                expert_obs, expert_actions = dataset.get_next_batch('train')
+                expert_obs, expert_actions, _ = dataset.get_next_batch('train')
                 feed_dict = {
                     obs_ph: expert_obs,
                     actions_ph: expert_actions,

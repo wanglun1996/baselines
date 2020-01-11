@@ -226,7 +226,7 @@ class PPO2(ActorCriticRLModel):
     def pretrain(self, dataset, n_epochs=10, learning_rate=1e-4, adam_epsilon=1e-8, val_interval=None, fix_first_layer=False):
 
        if str(self.policy) == "<class 'stable_baselines.common.policies.MlpPolicy'>":
-           super(MyPPO2, self).pretrain(dataset, n_epochs=n_epochs, learning_rate=learning_rate, adam_epsilon=adam_epsilon, val_interval=val_interval) 
+           super(PPO2, self).pretrain(dataset, n_epochs=n_epochs, learning_rate=learning_rate, adam_epsilon=adam_epsilon, val_interval=val_interval) 
 
        elif str(self.policy) == "<class 'stable_baselines.common.policies.MlpLstmPolicy'>":
            continuous_actions = isinstance(self.action_space, gym.spaces.Box)
