@@ -223,7 +223,7 @@ class PPO2(ActorCriticRLModel):
 
                 self.summary = tf.summary.merge_all()
 
-    def pretrain_lstm(self, dataset, n_epochs=10, learning_rate=1e-4, adam_epsilon=1e-8, val_interval=None, fix_first_layer=False):
+    def pretrain(self, dataset, n_epochs=10, learning_rate=1e-4, adam_epsilon=1e-8, val_interval=None, fix_first_layer=False):
 
        if str(self.policy) == "<class 'stable_baselines.common.policies.MlpPolicy'>":
            super(MyPPO2, self).pretrain(dataset, n_epochs=n_epochs, learning_rate=learning_rate, adam_epsilon=adam_epsilon, val_interval=val_interval) 
@@ -302,7 +302,7 @@ class PPO2(ActorCriticRLModel):
                if self.verbose > 0 and (epoch_idx + 1) % val_interval == 0:
                    val_loss = 0.0
                    # Full pass on the validation set
-                   for _ in range(dataset.max_train_traj_length):
+                   for _ in range(dataset.max_val_traj_length):
                        expert_obs, expert_actions, expert_dones = dataset.get_next_batch(split='val')
                        if states is None:
                            initial_state_shape = (expert_obs.shape[0], ) + tuple([self.initial_state.shape[1]])

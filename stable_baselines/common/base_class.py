@@ -201,7 +201,7 @@ class BaseRLModel(ABC):
                 val_interval = int(n_epochs / 10)
 
         with self.graph.as_default():
-            with tf.variable_scope('pretrain'):
+            with tf.variable_scope('pretrain', reuse=tf.AUTO_REUSE):
                 if continuous_actions:
                     obs_ph, actions_ph, deterministic_actions_ph = self._get_pretrain_placeholders()
                     loss = tf.reduce_mean(tf.square(actions_ph - deterministic_actions_ph))
@@ -227,7 +227,7 @@ class BaseRLModel(ABC):
         for epoch_idx in range(int(n_epochs)):
             train_loss = 0.0
             # Full pass on the training set
-            for _ in range(len(dataset.train_loader)):
+            for _ in range(len(dataset.max_train_traj_length)):
                 expert_obs, expert_actions = dataset.get_next_batch('train')
                 feed_dict = {
                     obs_ph: expert_obs,
@@ -236,18 +236,18 @@ class BaseRLModel(ABC):
                 train_loss_, _ = self.sess.run([loss, optim_op], feed_dict)
                 train_loss += train_loss_
 
-            train_loss /= len(dataset.train_loader)
+            train_loss /= len(dataset.max_train_traj_length)
 
             if self.verbose > 0 and (epoch_idx + 1) % val_interval == 0:
                 val_loss = 0.0
                 # Full pass on the validation set
-                for _ in range(len(dataset.val_loader)):
+                for _ in range(len(dataset.max_val_traj_length)):
                     expert_obs, expert_actions = dataset.get_next_batch('val')
                     val_loss_, = self.sess.run([loss], {obs_ph: expert_obs,
                                                         actions_ph: expert_actions})
                     val_loss += val_loss_
 
-                val_loss /= len(dataset.val_loader)
+                val_loss /= len(dataset.max_val_traj_length)
                 if self.verbose > 0:
                     print("==== Training progress {:.2f}% ====".format(100 * (epoch_idx + 1) / n_epochs))
                     print('Epoch {}'.format(epoch_idx + 1))
