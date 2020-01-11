@@ -26,7 +26,7 @@ class BaseRLModel(ABC):
     :param policy_base: (BasePolicy) the base policy used by this method
     """
 
-    def __init__(self, policy, env, verbose=0, *, requires_vec_env, policy_base, policy_kwargs=None):
+    def __init__(self, policy, env, verbose=0, *, requires_vec_env, policy_base, policy_kwargs=None, n_envs=64, observation_space=None, action_space=None):
         if isinstance(policy, str):
             self.policy = get_policy_from_name(policy_base, policy)
         else:
@@ -66,6 +66,10 @@ class BaseRLModel(ABC):
                         raise ValueError("Error: the model requires a non vectorized environment or a single vectorized"
                                          " environment.")
                 self.n_envs = 1
+        else:
+            self.n_envs = n_envs
+            self.observation_space = observation_space
+            self.action_space = action_space
 
     def get_env(self):
         """
@@ -441,9 +445,10 @@ class ActorCriticRLModel(BaseRLModel):
     """
 
     def __init__(self, policy, env, _init_setup_model, verbose=0, policy_base=ActorCriticPolicy,
-                 requires_vec_env=False, policy_kwargs=None):
+                 requires_vec_env=False, policy_kwargs=None, n_envs=64, observation_space=None, action_space=None):
         super(ActorCriticRLModel, self).__init__(policy, env, verbose=verbose, requires_vec_env=requires_vec_env,
-                                                 policy_base=policy_base, policy_kwargs=policy_kwargs)
+                                                 policy_base=policy_base, policy_kwargs=policy_kwargs, n_envs=n_envs, observation_space=observation_space, action_space=action_space)
+
 
         self.sess = None
         self.initial_state = None
