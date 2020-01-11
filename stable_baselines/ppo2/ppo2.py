@@ -44,7 +44,7 @@ class PPO2(ActorCriticRLModel):
     def __init__(self, policy, env, gamma=0.99, n_steps=128, ent_coef=0.01, learning_rate=2.5e-4, vf_coef=0.5,
                  max_grad_norm=0.5, lam=0.95, nminibatches=4, noptepochs=4, cliprange=0.2, verbose=0,
                  tensorboard_log=None, _init_setup_model=True, policy_kwargs=None,
-                 full_tensorboard_log=False, n_envs=64, observation_space=observation_space, action_space=action_space):
+                 full_tensorboard_log=False, n_envs=64, observation_space=None, action_space=None):
 
         super(PPO2, self).__init__(policy=policy, env=env, verbose=verbose, requires_vec_env=True,
                                    _init_setup_model=_init_setup_model, policy_kwargs=policy_kwargs, n_envs=n_envs, observation_space=obesrvation_space, action_space=action_space)
