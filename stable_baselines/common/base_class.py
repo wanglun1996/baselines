@@ -445,7 +445,7 @@ class ActorCriticRLModel(BaseRLModel):
     """
 
     def __init__(self, policy, env, _init_setup_model, verbose=0, policy_base=ActorCriticPolicy,
-                 requires_vec_env=False, policy_kwargs=None, n_envs=64, observation_space=None, action_space=None, n_envs=64, observation_space=None, action_space=None):
+                 requires_vec_env=False, policy_kwargs=None, n_envs=64, observation_space=None, action_space=None):
         super(ActorCriticRLModel, self).__init__(policy, env, verbose=verbose, requires_vec_env=requires_vec_env,
                                                  policy_base=policy_base, policy_kwargs=policy_kwargs, n_envs=n_envs, observation_space=observation_space, action_space=action_space)
 
